@@ -9,12 +9,15 @@ using namespace std;
 enum OrderType { MARKET, LIMIT };
 enum Side { BUY, SELL };
 
+long long globalTimestamp = 0;
+
 struct Order {
     int id;
     Side side;
     OrderType type;
     int price;
     int quantity;
+    long long timestamp;
 };
 
 struct OrderNode {
@@ -40,6 +43,8 @@ public:
     bool isCancelled = false;
 
     void addOrder(Order order) {
+        order.timestamp = globalTimestamp++; 
+
         if (order.type == MARKET) {
             if (order.side == BUY)
                 executeMarketBuy(*this, order.quantity);
@@ -59,6 +64,8 @@ public:
             auto it = prev(asks[order.price].end());
             orderMap[order.id] = OrderNode(newOrder, it);
         }
+
+        cout << "Order Added: ID=" << order.id << " Time=" << order.timestamp << endl;
 
         matchOrders(*this);
     }
