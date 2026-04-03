@@ -31,8 +31,8 @@ struct OrderNode {
 class OrderBook; // forward declaration
 
 void matchOrders(OrderBook &ob);
-void executeMarketBuy(OrderBook &ob, int quantity);
-void executeMarketSell(OrderBook &ob, int quantity);
+void executeMarketBuy(OrderBook &ob, Order* order);
+void executeMarketSell(OrderBook &ob, Order* order);
 
 class OrderBook {
 public:
@@ -40,29 +40,30 @@ public:
 
     map<int, list<Order*>, greater<int>> bids;
     map<int, list<Order*>> asks;
-    bool isCancelled = false;
 
     void addOrder(Order order) {
-        order.timestamp = globalTimestamp++; 
+        Order* newOrder = new Order(order); // allocate 
+        newOrder->timestamp = globalTimestamp++; 
 
         if (order.type == MARKET) {
+            cout << "Market Order Received: ID=" << newOrder->id << " Time=" << newOrder->timestamp << endl;
             if (order.side == BUY)
-                executeMarketBuy(*this, order.quantity);
+                executeMarketBuy(*this, newOrder);
             else
-                executeMarketSell(*this, order.quantity);
+                executeMarketSell(*this, newOrder);
+
+            delete newOrder;
             return;
         }
-
-        Order* newOrder = new Order(order); // allocate 
 
         if (order.side == BUY) {
             bids[order.price].push_back(newOrder);
             auto it = prev(bids[order.price].end());
-            orderMap[order.id] = OrderNode(newOrder, it);
+            orderMap.emplace(order.id, OrderNode(newOrder, it));
         } else {
             asks[order.price].push_back(newOrder);
             auto it = prev(asks[order.price].end());
-            orderMap[order.id] = OrderNode(newOrder, it);
+            orderMap.emplace(order.id, OrderNode(newOrder, it));
         }
 
         cout << "Order Added: ID=" << order.id << " Time=" << order.timestamp << endl;
@@ -76,7 +77,7 @@ public:
             return;
         }
 
-        OrderNode node = orderMap[orderId];
+        OrderNode &node = orderMap.at(orderId);
         Order* order = node.order;
         
         if (order->side == BUY) {
@@ -149,7 +150,8 @@ void matchOrders(OrderBook &ob) {
     }
 }
 
-void executeMarketBuy(OrderBook &ob, int quantity) {
+void executeMarketBuy(OrderBook &ob, Order* marketOrder) {
+    int quantity = marketOrder->quantity;
     while (quantity > 0 && !ob.asks.empty()) {
         auto bestAsk = ob.asks.begin();
 
@@ -157,8 +159,10 @@ void executeMarketBuy(OrderBook &ob, int quantity) {
 
         int tradedQty = min(quantity, sellOrder->quantity);
 
-        cout << "Market Buy executed: "
-             << tradedQty << " @ " << bestAsk->first << endl;
+        cout << "Trade: MKT BUY " << marketOrder->id
+             << " vs SELL " << sellOrder->id
+             << " Qty=" << tradedQty
+             << " @ " << bestAsk->first << endl;
 
         quantity -= tradedQty;
         sellOrder->quantity -= tradedQty;
@@ -179,7 +183,8 @@ void executeMarketBuy(OrderBook &ob, int quantity) {
     }
 }
 
-void executeMarketSell(OrderBook &ob, int quantity) {
+void executeMarketSell(OrderBook &ob, Order* marketOrder) {
+    int quantity = marketOrder->quantity;
     while (quantity > 0 && !ob.bids.empty()) {
         auto bestBid = ob.bids.begin();
 
@@ -187,8 +192,10 @@ void executeMarketSell(OrderBook &ob, int quantity) {
 
         int tradedQty = min(quantity, buyOrder->quantity);
 
-        cout << "Market Sell executed: "
-             << tradedQty << " @ " << bestBid->first << endl;
+        cout << "Trade: MKT SELL " << marketOrder->id
+             << " vs BUY " << buyOrder->id
+             << " Qty=" << tradedQty
+             << " @ " << bestBid->first << endl;
 
         quantity -= tradedQty;
         buyOrder->quantity -= tradedQty;
