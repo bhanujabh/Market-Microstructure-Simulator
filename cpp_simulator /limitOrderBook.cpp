@@ -2,6 +2,8 @@
 #include <map>
 #include <queue>
 #include <list>
+#include <unordered_map>
+
 using namespace std;
 
 enum OrderType { MARKET, LIMIT };
@@ -15,6 +17,14 @@ struct Order {
     int quantity;
 };
 
+struct OrderNode {
+    Order* order;
+    list<Order*>::iterator it;
+
+    OrderNode(Order* o, list<Order*>::iterator iter)
+        : order(o), it(iter) {}
+};
+
 class OrderBook; // forward declaration
 
 void matchOrders(OrderBook &ob);
@@ -23,7 +33,7 @@ void executeMarketSell(OrderBook &ob, int quantity);
 
 class OrderBook {
 public:
-    unordered_map<int, Order*> orderMap;
+    unordered_map<int, OrderNode> orderMap;
 
     map<int, list<Order*>, greater<int>> bids;
     map<int, list<Order*>> asks;
@@ -42,11 +52,13 @@ public:
 
         if (order.side == BUY) {
             bids[order.price].push_back(newOrder);
+            auto it = prev(bids[order.price].end());
+            orderMap[order.id] = OrderNode(newOrder, it);
         } else {
             asks[order.price].push_back(newOrder);
+            auto it = prev(asks[order.price].end());
+            orderMap[order.id] = OrderNode(newOrder, it);
         }
-
-        orderMap[order.id] = newOrder;
 
         matchOrders(*this);
     }
@@ -56,17 +68,19 @@ public:
             cout << "Order not found\n";
             return;
         }
-        Order* order = orderMap[orderId];
+
+        OrderNode node = orderMap[orderId];
+        Order* order = node.order;
         
         if (order->side == BUY) {
             auto &orderList = this->bids[order->price];
-            orderList.remove(order);
+            orderList.erase(node.it);   
 
             if (orderList.empty())
                 bids.erase(order->price);
         } else {
             auto &orderList = this->asks[order->price];
-            orderList.remove(order);
+            orderList.erase(node.it);  
 
             if (orderList.empty())
                 asks.erase(order->price);
@@ -116,6 +130,7 @@ void matchOrders(OrderBook &ob) {
         if (sellOrder->quantity == 0){
             int id = sellOrder->id;
             bestAsk->second.pop_front();
+            delete sellOrder;
             ob.orderMap.erase(id);
         }
 
@@ -144,6 +159,7 @@ void executeMarketBuy(OrderBook &ob, int quantity) {
         if (sellOrder->quantity == 0){
             int id = sellOrder->id;
             bestAsk->second.pop_front();
+            delete sellOrder;
             ob.orderMap.erase(id);
         }
 
@@ -173,6 +189,7 @@ void executeMarketSell(OrderBook &ob, int quantity) {
         if (buyOrder->quantity == 0){
             int id = buyOrder->id;        
             bestBid->second.pop_front(); 
+            delete buyOrder;
             ob.orderMap.erase(id);
         }
             
