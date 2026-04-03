@@ -9,7 +9,8 @@ using namespace std;
 enum OrderType { MARKET, LIMIT };
 enum Side { BUY, SELL };
 
-long long globalTimestamp = 0;
+long long orderTimestamp = 0;
+long long tradeTimestamp = 0;
 
 struct Order {
     int id;
@@ -34,6 +35,14 @@ void matchOrders(OrderBook &ob);
 void executeMarketBuy(OrderBook &ob, Order* order);
 void executeMarketSell(OrderBook &ob, Order* order);
 
+struct Trade {
+    int buyId;
+    int sellId;
+    int price;
+    int quantity;
+    long long timestamp;
+};
+
 class OrderBook {
 public:
     unordered_map<int, OrderNode> orderMap;
@@ -41,9 +50,11 @@ public:
     map<int, list<Order*>, greater<int>> bids;
     map<int, list<Order*>> asks;
 
+    vector<Trade> trades;
+
     void addOrder(Order order) {
         Order* newOrder = new Order(order); // allocate 
-        newOrder->timestamp = globalTimestamp++; 
+        newOrder->timestamp = orderTimestamp++; 
 
         if (order.type == MARKET) {
             cout << "Market Order Received: ID=" << newOrder->id << " Time=" << newOrder->timestamp << endl;
@@ -112,6 +123,8 @@ void matchOrders(OrderBook &ob) {
 
         int tradedQty = min(buyOrder->quantity, sellOrder->quantity);
 
+        ob.trades.push_back({buyOrder->id, sellOrder->id, bestAsk->first, tradedQty, tradeTimestamp++});
+
         cout << "Trade executed: "
              << tradedQty << " @ " << bestAsk->first << endl;
 
@@ -159,6 +172,8 @@ void executeMarketBuy(OrderBook &ob, Order* marketOrder) {
 
         int tradedQty = min(quantity, sellOrder->quantity);
 
+        ob.trades.push_back({marketOrder->id, sellOrder->id, bestAsk->first, tradedQty, tradeTimestamp++});
+
         cout << "Trade: MKT BUY " << marketOrder->id
              << " vs SELL " << sellOrder->id
              << " Qty=" << tradedQty
@@ -191,6 +206,8 @@ void executeMarketSell(OrderBook &ob, Order* marketOrder) {
         Order* buyOrder = bestBid->second.front();
 
         int tradedQty = min(quantity, buyOrder->quantity);
+
+        ob.trades.push_back({buyOrder->id, marketOrder->id, bestBid->first, tradedQty, tradeTimestamp++});
 
         cout << "Trade: MKT SELL " << marketOrder->id
              << " vs BUY " << buyOrder->id
