@@ -8,6 +8,11 @@ using namespace std;
 
 enum OrderType { MARKET, LIMIT };
 enum Side { BUY, SELL };
+enum EventType {
+    ORDER_ADD,
+    ORDER_CANCEL,
+    TRADE_EXEC
+};
 
 long long orderTimestamp = 0;
 long long tradeTimestamp = 0;
@@ -43,6 +48,13 @@ struct Trade {
     long long timestamp;
 };
 
+struct Snapshot {
+    long long timestamp;
+
+    vector<pair<int, int>> bidLevels; // price, total qty
+    vector<pair<int, int>> askLevels;
+};
+
 class OrderBook {
 public:
     unordered_map<int, OrderNode> orderMap;
@@ -51,6 +63,8 @@ public:
     map<int, list<Order*>> asks;
 
     vector<Trade> trades;
+
+    vector<Snapshot> snapshots;
 
     void addOrder(Order order) {
         Order* newOrder = new Order(order); // allocate 
@@ -64,6 +78,7 @@ public:
                 executeMarketSell(*this, newOrder);
 
             delete newOrder;
+            onEvent(ORDER_ADD);
             return;
         }
 
@@ -80,6 +95,7 @@ public:
         cout << "Order Added: ID=" << order.id << " Time=" << order.timestamp << endl;
 
         matchOrders(*this);
+        onEvent(ORDER_ADD);
     }
 
     void cancelOrder(int orderId) {
@@ -108,6 +124,49 @@ public:
         orderMap.erase(orderId);
         
         cout << "Order " << orderId << " cancelled\n";
+
+        onEvent(ORDER_CANCEL);
+    }
+
+    void takeSnapshot(long long timestamp) {
+        Snapshot snap;
+        snap.timestamp = timestamp;
+        // Aggregate bids
+        for (auto &priceLevel : bids) {
+            int totalQty = 0;
+            for (auto order : priceLevel.second) {
+                totalQty += order->quantity;
+            }
+            snap.bidLevels.push_back({priceLevel.first, totalQty});
+        }
+        // Aggregate asks
+        for (auto &priceLevel : asks) {
+            int totalQty = 0;
+            for (auto order : priceLevel.second) {
+                totalQty += order->quantity;
+            }
+            snap.askLevels.push_back({priceLevel.first, totalQty});
+        }
+        snapshots.push_back(snap);
+    }
+
+    void printSnapshots() {
+        for (auto &snap : snapshots) {
+            cout << "\nSnapshot @ " << snap.timestamp << endl;
+
+            cout << "BIDS:\n";
+            for (auto &b : snap.bidLevels)
+                cout << b.first << " -> " << b.second << endl;
+
+            cout << "ASKS:\n";
+            for (auto &a : snap.askLevels)
+                cout << a.first << " -> " << a.second << endl;
+        }
+    }
+
+    void onEvent(EventType event) {
+        long long ts = orderTimestamp + tradeTimestamp; // unified timeline
+        takeSnapshot(ts);
     }
 };
 
@@ -124,6 +183,8 @@ void matchOrders(OrderBook &ob) {
         int tradedQty = min(buyOrder->quantity, sellOrder->quantity);
 
         ob.trades.push_back({buyOrder->id, sellOrder->id, bestAsk->first, tradedQty, tradeTimestamp++});
+
+        ob.onEvent(TRADE_EXEC);
 
         cout << "Trade executed: "
              << tradedQty << " @ " << bestAsk->first << endl;
@@ -174,6 +235,8 @@ void executeMarketBuy(OrderBook &ob, Order* marketOrder) {
 
         ob.trades.push_back({marketOrder->id, sellOrder->id, bestAsk->first, tradedQty, tradeTimestamp++});
 
+        ob.onEvent(TRADE_EXEC);
+
         cout << "Trade: MKT BUY " << marketOrder->id
              << " vs SELL " << sellOrder->id
              << " Qty=" << tradedQty
@@ -208,6 +271,8 @@ void executeMarketSell(OrderBook &ob, Order* marketOrder) {
         int tradedQty = min(quantity, buyOrder->quantity);
 
         ob.trades.push_back({buyOrder->id, marketOrder->id, bestBid->first, tradedQty, tradeTimestamp++});
+
+        ob.onEvent(TRADE_EXEC);
 
         cout << "Trade: MKT SELL " << marketOrder->id
              << " vs BUY " << buyOrder->id
