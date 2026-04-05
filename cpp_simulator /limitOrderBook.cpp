@@ -11,6 +11,7 @@ enum Side { BUY, SELL };
 enum EventType {
     ORDER_ADD,
     ORDER_CANCEL,
+    ORDER_MODIFY,
     TRADE_EXEC
 };
 
@@ -126,6 +127,47 @@ public:
         cout << "Order " << orderId << " cancelled\n";
 
         onEvent(ORDER_CANCEL);
+    }
+
+    void modifyOrder(int orderId, int newPrice, int newQty) {
+        if (orderMap.find(orderId) == orderMap.end()) {
+            cout << "Order not found\n";
+            return;
+        }
+
+        if (newQty == 0) {
+            cancelOrder(orderId);
+            return;
+        }
+        
+        OrderNode &node = orderMap.at(orderId);
+        Order* order = node.order;
+
+        Side side = order->side;
+        OrderType type = order->type;
+        
+        // Case 1: PRICE CHANGE → cancel + re-add
+        if (order->price != newPrice) {
+            // remove old order
+            cancelOrder(orderId);
+
+            // create new order with SAME ID (or new ID depending design)
+            Order newOrder = {orderId, side, type, newPrice, newQty};
+            addOrder(newOrder);
+            
+            cout << "Order " << orderId << " modified (price change)\n";
+            return;
+        }
+        
+        // Case 2: ONLY QUANTITY CHANGE
+        if (newQty > order->quantity) {
+            order->timestamp = orderTimestamp++; // lose priority
+        }
+        order->quantity = newQty;
+        cout << "Order " << orderId << " modified (qty change)\n";
+
+        matchOrders(*this);
+        onEvent(ORDER_MODIFY);
     }
 
     void takeSnapshot(long long timestamp) {
