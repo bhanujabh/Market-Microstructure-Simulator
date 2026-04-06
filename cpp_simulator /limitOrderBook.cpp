@@ -3,6 +3,7 @@
 #include <queue>
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -59,7 +60,7 @@ void executeMarketSell(OrderBook &ob, Order* order);
 class Strategy {
 public:
     virtual void onEvent(OrderBook &ob) = 0;
-    virtual void onTrade(const Trade& t) = 0;
+    virtual void onTrade(const Trade& t, OrderBook &ob) = 0;
 };
 
 class OrderBook {
@@ -236,26 +237,75 @@ class SpreadStrategy : public Strategy {
 public:
     int threshold = 2;
 
+    int position = 0;        // current inventory
+    int maxPosition = 5;     // risk limit
+
+    int buyOrderId = -1;
+    int sellOrderId = -1;
+
+    int nextId = 1000;
+
+    unordered_set<int> myOrders;
+
     void onEvent(OrderBook &ob) override {
         if (ob.bids.empty() || ob.asks.empty()) return;
 
         int bestBid = ob.bids.begin()->first;
         int bestAsk = ob.asks.begin()->first;
 
-        if (bestAsk - bestBid >= threshold) {
-            cout << "Strategy triggered\n";
+        // too much inventory → sell immediately to reduce risk
+        // Why MARKET order? SELL, MARKET -> Because: want to exit immediately
+        // limit order → might not fill but market order → guaranteed execution 
+        if (position >= maxPosition) {
+            cout << "Reducing long position\n";
+            ob.addOrder({nextId++, SELL, MARKET, 0, 1});
+            return; // stop further trading
+        }
+        if (position <= -maxPosition) {
+            cout << "Reducing short position\n";
+            ob.addOrder({nextId++, BUY, MARKET, 0, 1});
+            return;
+        }
 
-            ob.addOrder({1000, BUY, LIMIT, bestBid, 1});
-            ob.addOrder({1001, SELL, LIMIT, bestAsk, 1});
+        if (bestAsk - bestBid < threshold) return;
+        cout << "Strategy triggered\n";
+
+        // RISK CHECKS
+        bool allowBuy = (position < maxPosition);
+        bool allowSell = (position > -maxPosition);
+
+        // cancel previous orders to avoid spam
+        if (buyOrderId != -1) ob.cancelOrder(buyOrderId);
+        if (sellOrderId != -1) ob.cancelOrder(sellOrderId);
+
+        // place only if allowed
+        if (allowBuy) {
+            buyOrderId = nextId++;
+            myOrders.insert(buyOrderId);
+            ob.addOrder({buyOrderId, BUY, LIMIT, bestBid, 1});
+        }
+
+        if (allowSell) {
+            sellOrderId = nextId++;
+            myOrders.insert(sellOrderId);
+            ob.addOrder({sellOrderId, SELL, LIMIT, bestAsk, 1});
         }
     }
-    void onTrade(const Trade& t) override {
-        cout << "Trade: " << t.price << endl;
+    void onTrade(const Trade& t, OrderBook &ob) override {
+        if (myOrders.count(t.buyId)) position += t.quantity;
+        if (myOrders.count(t.sellId)) position -= t.quantity;
+        cout << "Trade: " << t.price << " | Position: " << position << endl;
     }
 };
 
 class ImbalanceStrategy : public Strategy {
 public:
+    int position = 0;
+    int maxPosition = 5;
+    int nextId = 2000;
+
+    unordered_set<int> myOrders;
+
     void onEvent(OrderBook &ob) override {
         int bidQty = 0, askQty = 0;
 
@@ -267,14 +317,31 @@ public:
 
         double imbalance = (double)bidQty / (bidQty + askQty);
 
+        // RISK MANAGEMENT FIRST
+        if (position >= maxPosition) {
+            ob.addOrder({nextId++, SELL, MARKET, 0, 1});
+            return;
+        }
+        if (position <= -maxPosition) {
+            ob.addOrder({nextId++, BUY, MARKET, 0, 1});
+            return;
+        }
+        
+        // STRATEGY 
+        int id = nextId++;
         if (imbalance > 0.7) {
-            ob.addOrder({2000, BUY, MARKET, 0, 1});
+            myOrders.insert(id);
+            ob.addOrder({id, BUY, MARKET, 0, 1});
         } else if (imbalance < 0.3) {
-            ob.addOrder({2001, SELL, MARKET, 0, 1});
+            myOrders.insert(id);
+            ob.addOrder({id, SELL, MARKET, 0, 1});
         }
     }
-    void onTrade(const Trade& t) override {
-        cout << "Trade: " << t.price << endl;
+    void onTrade(const Trade& t, OrderBook &ob) override {
+        if (myOrders.count(t.buyId)) position += t.quantity;
+        if (myOrders.count(t.sellId)) position -= t.quantity;
+
+        cout << "Position: " << position << endl;
     }
 };
 
@@ -282,25 +349,66 @@ class MomentumStrategy : public Strategy {
 public:
     vector<int> prices;
 
-    void onTrade(const Trade& t) override {
+    int position = 0;
+    int maxPosition = 5;
+    int nextId = 3000;
+
+    unordered_set<int> myOrders;
+
+    void onTrade(const Trade& t, OrderBook &ob) override {
         prices.push_back(t.price);
+
+        if (myOrders.count(t.buyId)) position += t.quantity;
+        if (myOrders.count(t.sellId)) position -= t.quantity;
 
         if (prices.size() < 3) return;
 
         int n = prices.size();
 
+        // RISK FIRST
+        if (position >= maxPosition) {
+            cout << "Reducing long\n";
+            return;
+        }
+        if (position <= -maxPosition) {
+            cout << "Reducing short\n";
+            return;
+        }
+
         // upward momentum
         if (prices[n-1] > prices[n-2] && prices[n-2] > prices[n-3]) {
             cout << "Momentum BUY signal\n";
+            int id = nextId++;
+            myOrders.insert(id);
+            ob.addOrder({id, BUY, MARKET, 0, 1});
         }
 
         // downward momentum
         else if (prices[n-1] < prices[n-2] && prices[n-2] < prices[n-3]) {
             cout << "Momentum SELL signal\n";
+            int id = nextId++;
+            myOrders.insert(id);
+            ob.addOrder({id, SELL, MARKET, 0, 1});
         }
     }
 
-    void onEvent(OrderBook &ob) override {}
+    void onEvent(OrderBook &ob) override {
+        if (position > maxPosition) {
+            int reduceQty = position - maxPosition;
+            int id = nextId++;
+            myOrders.insert(id);
+            ob.addOrder({id, SELL, MARKET, 0, reduceQty});
+            return;
+        }
+        
+        if (position < -maxPosition) {
+            int reduceQty = -maxPosition - position;
+            int id = nextId++;
+            myOrders.insert(id);
+            ob.addOrder({id, BUY, MARKET, 0, reduceQty});
+            return;
+        }
+    }
 };
 
 class MarketMakingStrategy : public Strategy {
@@ -310,6 +418,12 @@ public:
 
     int nextId = 1000;
     int spread = 2;
+
+    // tracking inventory
+    int position = 0;
+    int maxPosition = 5;
+
+    unordered_set<int> myOrders;
 
     void onEvent(OrderBook &ob) override {
         if (ob.bids.empty() || ob.asks.empty()) return;
@@ -322,6 +436,16 @@ public:
         int buyPrice = mid - spread;
         int sellPrice = mid + spread;
 
+        // RISK FIRST
+        if (position >= maxPosition) {
+            ob.addOrder({nextId++, SELL, MARKET, 0, 1});
+            return;
+        }
+        if (position <= -maxPosition) {
+            ob.addOrder({nextId++, BUY, MARKET, 0, 1});
+            return;
+        }
+
         // cancel old orders
         if (buyOrderId != -1) ob.cancelOrder(buyOrderId);
         if (sellOrderId != -1) ob.cancelOrder(sellOrderId);
@@ -330,22 +454,18 @@ public:
         buyOrderId = nextId++;
         sellOrderId = nextId++;
 
+        myOrders.insert(buyOrderId);
+        myOrders.insert(sellOrderId);
+
         cout << "Market Making...\n";
 
-        ob.addOrder({4000, BUY, LIMIT, buyPrice, 1});
-        ob.addOrder({4001, SELL, LIMIT, sellPrice, 1});
-    }
+        ob.addOrder({buyOrderId, BUY, LIMIT, buyPrice, 1});
+        ob.addOrder({sellOrderId, SELL, LIMIT, sellPrice, 1});
+    } 
 
-    // tracking inventory 
-    int position = 0;
-
-    void onTrade(const Trade& t) override { 
-        if (t.buyId == buyOrderId) {
-            position += t.quantity;
-        }
-        if (t.sellId == sellOrderId) {
-            position -= t.quantity;
-        }
+    void onTrade(const Trade& t, OrderBook &ob) override { 
+        if (myOrders.count(t.buyId)) position += t.quantity;
+        if (myOrders.count(t.sellId)) position -= t.quantity;
         
         cout << "Position: " << position << endl;
     }
@@ -365,11 +485,13 @@ void matchOrders(OrderBook &ob) {
 
         ob.trades.push_back({buyOrder->id, sellOrder->id, bestAsk->first, tradedQty, tradeTimestamp++});
 
-        ob.onEvent(TRADE_EXEC);
-
-        if (ob.strategy) {
-            ob.strategy->onTrade(ob.trades.back());
+        if (ob.strategy && !ob.isStrategyRunning) {
+            ob.isStrategyRunning = true;
+            ob.strategy->onTrade(ob.trades.back(), ob);
+            ob.isStrategyRunning = false;
         }
+
+        ob.onEvent(TRADE_EXEC);
 
         cout << "Trade executed: "
              << tradedQty << " @ " << bestAsk->first << endl;
@@ -420,11 +542,13 @@ void executeMarketBuy(OrderBook &ob, Order* marketOrder) {
 
         ob.trades.push_back({marketOrder->id, sellOrder->id, bestAsk->first, tradedQty, tradeTimestamp++});
 
-        ob.onEvent(TRADE_EXEC);
-
-        if (ob.strategy) {
-            ob.strategy->onTrade(ob.trades.back());
+        if (ob.strategy && !ob.isStrategyRunning) {
+            ob.isStrategyRunning = true;
+            ob.strategy->onTrade(ob.trades.back(), ob);
+            ob.isStrategyRunning = false;
         }
+
+        ob.onEvent(TRADE_EXEC);
 
         cout << "Trade: MKT BUY " << marketOrder->id
              << " vs SELL " << sellOrder->id
@@ -461,11 +585,13 @@ void executeMarketSell(OrderBook &ob, Order* marketOrder) {
 
         ob.trades.push_back({buyOrder->id, marketOrder->id, bestBid->first, tradedQty, tradeTimestamp++});
 
-        ob.onEvent(TRADE_EXEC);
-
-        if (ob.strategy) {
-            ob.strategy->onTrade(ob.trades.back());
+        if (ob.strategy && !ob.isStrategyRunning) {
+            ob.isStrategyRunning = true;
+            ob.strategy->onTrade(ob.trades.back(), ob);
+            ob.isStrategyRunning = false;
         }
+
+        ob.onEvent(TRADE_EXEC);
 
         cout << "Trade: MKT SELL " << marketOrder->id
              << " vs BUY " << buyOrder->id
