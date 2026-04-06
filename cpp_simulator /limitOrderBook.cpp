@@ -247,6 +247,8 @@ public:
 
     unordered_set<int> myOrders;
 
+    double cash = 0;     // money earned/spent
+
     void onEvent(OrderBook &ob) override {
         if (ob.bids.empty() || ob.asks.empty()) return;
 
@@ -292,9 +294,32 @@ public:
         }
     }
     void onTrade(const Trade& t, OrderBook &ob) override {
-        if (myOrders.count(t.buyId)) position += t.quantity;
-        if (myOrders.count(t.sellId)) position -= t.quantity;
-        cout << "Trade: " << t.price << " | Position: " << position << endl;
+        if (myOrders.count(t.buyId)){
+            position += t.quantity;
+            cash -= t.price * t.quantity;
+        } 
+        if (myOrders.count(t.sellId)){
+            position -= t.quantity;
+            cash += t.price * t.quantity;
+        } 
+        cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
+    }
+
+    double getPnL(OrderBook &ob) {
+        double mid = 0;
+
+        if (!ob.bids.empty() && !ob.asks.empty()) {
+            int bestBid = ob.bids.begin()->first;
+            int bestAsk = ob.asks.begin()->first;
+            mid = (bestBid + bestAsk) / 2.0;
+        }
+        return cash + position * mid;
+    }
+
+    void printStats(OrderBook &ob) {
+        cout << "Final Position: " << position << endl;
+        cout << "Cash: " << cash << endl;
+        cout << "PnL: " << getPnL(ob) << endl;
     }
 };
 
@@ -305,6 +330,8 @@ public:
     int nextId = 2000;
 
     unordered_set<int> myOrders;
+
+    double cash = 0;     // money earned/spent
 
     void onEvent(OrderBook &ob) override {
         int bidQty = 0, askQty = 0;
@@ -338,10 +365,33 @@ public:
         }
     }
     void onTrade(const Trade& t, OrderBook &ob) override {
-        if (myOrders.count(t.buyId)) position += t.quantity;
-        if (myOrders.count(t.sellId)) position -= t.quantity;
+        if (myOrders.count(t.buyId)){
+            position += t.quantity;
+            cash -= t.price * t.quantity;
+        } 
+        if (myOrders.count(t.sellId)){
+            position -= t.quantity;
+            cash += t.price * t.quantity;
+        } 
 
-        cout << "Position: " << position << endl;
+        cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
+    }
+
+    double getPnL(OrderBook &ob) {
+        double mid = 0;
+
+        if (!ob.bids.empty() && !ob.asks.empty()) {
+            int bestBid = ob.bids.begin()->first;
+            int bestAsk = ob.asks.begin()->first;
+            mid = (bestBid + bestAsk) / 2.0;
+        }
+        return cash + position * mid;
+    }
+
+    void printStats(OrderBook &ob) {
+        cout << "Final Position: " << position << endl;
+        cout << "Cash: " << cash << endl;
+        cout << "PnL: " << getPnL(ob) << endl;
     }
 };
 
@@ -355,11 +405,19 @@ public:
 
     unordered_set<int> myOrders;
 
+    double cash = 0;     // money earned/spent
+
     void onTrade(const Trade& t, OrderBook &ob) override {
         prices.push_back(t.price);
 
-        if (myOrders.count(t.buyId)) position += t.quantity;
-        if (myOrders.count(t.sellId)) position -= t.quantity;
+        if (myOrders.count(t.buyId)){
+            position += t.quantity;
+            cash -= t.price * t.quantity; // you paid 
+        } 
+        if (myOrders.count(t.sellId)){
+            position -= t.quantity;
+            cash += t.price * t.quantity; // you earned
+        } 
 
         if (prices.size() < 3) return;
 
@@ -368,6 +426,9 @@ public:
         // RISK FIRST
         if (position >= maxPosition) {
             cout << "Reducing long\n";
+            int id = nextId++;
+            myOrders.insert(id);
+            ob.addOrder({id, SELL, MARKET, 0, 1});
             return;
         }
         if (position <= -maxPosition) {
@@ -409,6 +470,23 @@ public:
             return;
         }
     }
+
+    double getPnL(OrderBook &ob) {
+        double mid = 0;
+
+        if (!ob.bids.empty() && !ob.asks.empty()) {
+            int bestBid = ob.bids.begin()->first;
+            int bestAsk = ob.asks.begin()->first;
+            mid = (bestBid + bestAsk) / 2.0;
+        }
+        return cash + position * mid;
+    }
+
+    void printStats(OrderBook &ob) {
+        cout << "Final Position: " << position << endl;
+        cout << "Cash: " << cash << endl;
+        cout << "PnL: " << getPnL(ob) << endl;
+    }
 };
 
 class MarketMakingStrategy : public Strategy {
@@ -424,6 +502,8 @@ public:
     int maxPosition = 5;
 
     unordered_set<int> myOrders;
+
+    double cash = 0;     // money earned/spent
 
     void onEvent(OrderBook &ob) override {
         if (ob.bids.empty() || ob.asks.empty()) return;
@@ -464,10 +544,33 @@ public:
     } 
 
     void onTrade(const Trade& t, OrderBook &ob) override { 
-        if (myOrders.count(t.buyId)) position += t.quantity;
-        if (myOrders.count(t.sellId)) position -= t.quantity;
+        if (myOrders.count(t.buyId)) {
+            position += t.quantity;
+            cash -= t.price * t.quantity;
+        }
+        if (myOrders.count(t.sellId)) {
+            position -= t.quantity;
+            cash += t.price * t.quantity;
+        } 
         
-        cout << "Position: " << position << endl;
+        cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
+    }
+
+    double getPnL(OrderBook &ob) {
+        double mid = 0;
+
+        if (!ob.bids.empty() && !ob.asks.empty()) {
+            int bestBid = ob.bids.begin()->first;
+            int bestAsk = ob.asks.begin()->first;
+            mid = (bestBid + bestAsk) / 2.0;
+        }
+        return cash + position * mid;
+    }
+
+    void printStats(OrderBook &ob) {
+        cout << "Final Position: " << position << endl;
+        cout << "Cash: " << cash << endl;
+        cout << "PnL: " << getPnL(ob) << endl;
     }
 };
 
