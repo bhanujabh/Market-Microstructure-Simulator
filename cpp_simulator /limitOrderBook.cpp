@@ -61,6 +61,7 @@ class Strategy {
 public:
     virtual void onEvent(OrderBook &ob) = 0;
     virtual void onTrade(const Trade& t, OrderBook &ob) = 0;
+    virtual void printStats(OrderBook &ob) = 0;
     vector<double> pnlHistory;
     double maxPnL = -1e9;
     double maxDrawdown = 0;
@@ -273,6 +274,11 @@ public:
 
     double inventoryPenalty = 0.1;
 
+    int wins = 0;
+    int totalTrades = 0;
+
+    unordered_set<int> countedOrders;
+
     void onEvent(OrderBook &ob) override {
         if (ob.bids.empty() || ob.asks.empty()) return;
 
@@ -330,11 +336,30 @@ public:
         if (execStats.count(t.buyId)) {
             execStats[t.buyId].totalValue += t.price * t.quantity;
             execStats[t.buyId].filledQty += t.quantity;
+
+            double expected = execStats[t.buyId].expectedPrice;
+            // count only once per order
+            if (!countedOrders.count(t.buyId)) {
+                totalTrades++;
+                countedOrders.insert(t.buyId);
+                if (t.price < expected) {  // BUY → lower is better
+                    wins++;
+                }
+            }
         }
         if (execStats.count(t.sellId)) {
             execStats[t.sellId].totalValue += t.price * t.quantity;
             execStats[t.sellId].filledQty += t.quantity;
-        } 
+
+            double expected = execStats[t.sellId].expectedPrice;
+            if (!countedOrders.count(t.sellId)) {
+                totalTrades++;
+                countedOrders.insert(t.sellId);
+                if (t.price > expected) {  // SELL → higher is better
+                    wins++;
+                }
+            }
+        }
 
         // Position + cash (YOU MISSED THIS)
         if (myOrders.count(t.buyId)) {
@@ -396,18 +421,25 @@ public:
         return mean / stddev;
     }
 
-    void printStats(OrderBook &ob) {
+    double getWinRate() {
+        if (totalTrades == 0) return 0;
+        return (double)wins / totalTrades;
+    }
+
+    void printStats(OrderBook &ob) override {
         for (auto &p : execStats) {
             cout << "Order " << p.first
              << " | AvgPx: " << getAvgExecutionPrice(p.first)
              << " | FillRate: " << getFillRate(p.first)
              << " | Slippage: " << getSlippage(p.first)
-             << " | Sharpe ratio: " << getSharpe()
              << endl;
         }
         cout << "Final Position: " << position << endl;
         cout << "Cash: " << cash << endl;
         cout << "PnL: " << getPnL(ob) << endl;
+        cout << "Drawdown: " << maxDrawdown << endl;
+        cout << "Sharpe: " << getSharpe() << endl;
+        cout << "Win Rate: " << getWinRate() << endl;
     }
 };
 
@@ -424,6 +456,11 @@ public:
     unordered_map<int, ExecutionStats> execStats;
 
     double inventoryPenalty = 0.1;
+
+    int wins = 0;
+    int totalTrades = 0;
+
+    unordered_set<int> countedOrders;
 
     void onEvent(OrderBook &ob) override {
         int bidQty = 0, askQty = 0;
@@ -468,10 +505,29 @@ public:
         if (execStats.count(t.buyId)) {
             execStats[t.buyId].totalValue += t.price * t.quantity;
             execStats[t.buyId].filledQty += t.quantity;
+
+            double expected = execStats[t.buyId].expectedPrice;
+            // count only once per order
+            if (!countedOrders.count(t.buyId)) {
+                totalTrades++;
+                countedOrders.insert(t.buyId);
+                if (t.price < expected) {  // BUY → lower is better
+                    wins++;
+                }
+            }
         }
         if (execStats.count(t.sellId)) {
             execStats[t.sellId].totalValue += t.price * t.quantity;
             execStats[t.sellId].filledQty += t.quantity;
+
+            double expected = execStats[t.sellId].expectedPrice;
+            if (!countedOrders.count(t.sellId)) {
+                totalTrades++;
+                countedOrders.insert(t.sellId);
+                if (t.price > expected) {  // SELL → higher is better
+                    wins++;
+                }
+            }
         }
 
         if (myOrders.count(t.buyId)){
@@ -534,18 +590,25 @@ public:
         return mean / stddev;
     }
 
-    void printStats(OrderBook &ob) {
+    double getWinRate() {
+        if (totalTrades == 0) return 0;
+        return (double)wins / totalTrades;
+    }
+
+    void printStats(OrderBook &ob) override {
         for (auto &p : execStats) {
             cout << "Order " << p.first
              << " | AvgPx: " << getAvgExecutionPrice(p.first)
              << " | FillRate: " << getFillRate(p.first)
              << " | Slippage: " << getSlippage(p.first)
-             << " | Sharpe ratio: " << getSharpe()
              << endl;
         }
         cout << "Final Position: " << position << endl;
         cout << "Cash: " << cash << endl;
         cout << "PnL: " << getPnL(ob) << endl;
+        cout << "Drawdown: " << maxDrawdown << endl;
+        cout << "Sharpe: " << getSharpe() << endl;
+        cout << "Win Rate: " << getWinRate() << endl;
     }
 };
 
@@ -565,16 +628,40 @@ public:
 
     double inventoryPenalty = 0.1;
 
+    int wins = 0;
+    int totalTrades = 0;
+
+    unordered_set<int> countedOrders;
+
     void onTrade(const Trade& t, OrderBook &ob) override {
         prices.push_back(t.price);
 
         if (execStats.count(t.buyId)) {
             execStats[t.buyId].totalValue += t.price * t.quantity;
             execStats[t.buyId].filledQty += t.quantity;
+
+            double expected = execStats[t.buyId].expectedPrice;
+            // count only once per order
+            if (!countedOrders.count(t.buyId)) {
+                totalTrades++;
+                countedOrders.insert(t.buyId);
+                if (t.price < expected) {  // BUY → lower is better
+                    wins++;
+                }
+            }
         }
         if (execStats.count(t.sellId)) {
             execStats[t.sellId].totalValue += t.price * t.quantity;
             execStats[t.sellId].filledQty += t.quantity;
+
+            double expected = execStats[t.sellId].expectedPrice;
+            if (!countedOrders.count(t.sellId)) {
+                totalTrades++;
+                countedOrders.insert(t.sellId);
+                if (t.price > expected) {  // SELL → higher is better
+                    wins++;
+                }
+            }
         }
 
         if (myOrders.count(t.buyId)){
@@ -688,18 +775,25 @@ public:
         return mean / stddev;
     }
 
-    void printStats(OrderBook &ob) {
+    double getWinRate() {
+        if (totalTrades == 0) return 0;
+        return (double)wins / totalTrades;
+    }
+
+    void printStats(OrderBook &ob) override {
         for (auto &p : execStats) {
             cout << "Order " << p.first
              << " | AvgPx: " << getAvgExecutionPrice(p.first)
              << " | FillRate: " << getFillRate(p.first)
              << " | Slippage: " << getSlippage(p.first)
-             << " | Sharpe ratio: " << getSharpe()
              << endl;
         }
         cout << "Final Position: " << position << endl;
         cout << "Cash: " << cash << endl;
         cout << "PnL: " << getPnL(ob) << endl;
+        cout << "Drawdown: " << maxDrawdown << endl;
+        cout << "Sharpe: " << getSharpe() << endl;
+        cout << "Win Rate: " << getWinRate() << endl;
     }
 };
 
@@ -722,6 +816,11 @@ public:
     unordered_map<int, ExecutionStats> execStats;
 
     double inventoryPenalty = 0.1;
+
+    int wins = 0;
+    int totalTrades = 0;
+
+    unordered_set<int> countedOrders;
     
     void onEvent(OrderBook &ob) override {
         if (ob.bids.empty() || ob.asks.empty()) return;
@@ -781,10 +880,29 @@ public:
         if (execStats.count(t.buyId)) {
             execStats[t.buyId].totalValue += t.price * t.quantity;
             execStats[t.buyId].filledQty += t.quantity;
+
+            double expected = execStats[t.buyId].expectedPrice;
+            // count only once per order
+            if (!countedOrders.count(t.buyId)) {
+                totalTrades++;
+                countedOrders.insert(t.buyId);
+                if (t.price < expected) {  // BUY → lower is better
+                    wins++;
+                }
+            }
         }
         if (execStats.count(t.sellId)) {
             execStats[t.sellId].totalValue += t.price * t.quantity;
             execStats[t.sellId].filledQty += t.quantity;
+
+            double expected = execStats[t.sellId].expectedPrice;
+            if (!countedOrders.count(t.sellId)) {
+                totalTrades++;
+                countedOrders.insert(t.sellId);
+                if (t.price > expected) {  // SELL → higher is better
+                    wins++;
+                }
+            }
         }
 
         if (myOrders.count(t.buyId)) {
@@ -847,7 +965,12 @@ public:
         return mean / stddev;
     }
 
-    void printStats(OrderBook &ob) {
+    double getWinRate() {
+        if (totalTrades == 0) return 0;
+        return (double)wins / totalTrades;
+    }
+
+    void printStats(OrderBook &ob) override {
         for (auto &p : execStats) {
             cout << "Order " << p.first
              << " | AvgPx: " << getAvgExecutionPrice(p.first)
@@ -859,6 +982,9 @@ public:
         cout << "Final Position: " << position << endl;
         cout << "Cash: " << cash << endl;
         cout << "PnL: " << getPnL(ob) << endl;
+        cout << "Drawdown: " << maxDrawdown << endl;
+        cout << "Sharpe: " << getSharpe() << endl;
+        cout << "Win Rate: " << getWinRate() << endl;
     }
 };
 
@@ -1012,10 +1138,25 @@ int main() {
     OrderBook ob;
 
     SpreadStrategy strat;
-    ob.strategy = &strat;
+    // ob.strategy = &strat;
+    vector<Strategy*> strategies = {
+        new SpreadStrategy(),
+        new ImbalanceStrategy(),
+        new MomentumStrategy(),
+        new MarketMakingStrategy()
+    };
 
-    ob.addOrder({1, BUY, LIMIT, 100, 10});
-    ob.addOrder({2, SELL, LIMIT, 105, 5});
+    for (auto strat : strategies) {
+        OrderBook ob;
+        ob.strategy = strat;
+        ob.addOrder({1, BUY, LIMIT, 100, 10});
+        ob.addOrder({2, SELL, LIMIT, 105, 5});
+        cout << "\nStrategy Results:\n";
+        strat->printStats(ob);
+    }
+
+    // ob.addOrder({1, BUY, LIMIT, 100, 10});
+    // ob.addOrder({2, SELL, LIMIT, 105, 5});
 
     return 0;
 }
