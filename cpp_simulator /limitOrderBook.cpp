@@ -379,12 +379,30 @@ public:
         return getAvgExecutionPrice(orderId) - execStats[orderId].expectedPrice;
     }
 
+    double getSharpe() {
+        if (pnlHistory.size() < 2) return 0;
+        vector<double> returns;
+        for (int i = 1; i < pnlHistory.size(); i++) {
+            returns.push_back(pnlHistory[i] - pnlHistory[i-1]);
+        }
+        double mean = 0;
+        for (double r : returns) mean += r;
+        mean /= returns.size();
+        double var = 0;
+        for (double r : returns) var += (r - mean)*(r - mean);
+        var /= returns.size();
+        double stddev = sqrt(var);
+        if (stddev == 0) return 0;
+        return mean / stddev;
+    }
+
     void printStats(OrderBook &ob) {
         for (auto &p : execStats) {
             cout << "Order " << p.first
              << " | AvgPx: " << getAvgExecutionPrice(p.first)
              << " | FillRate: " << getFillRate(p.first)
              << " | Slippage: " << getSlippage(p.first)
+             << " | Sharpe ratio: " << getSharpe()
              << endl;
         }
         cout << "Final Position: " << position << endl;
@@ -499,12 +517,30 @@ public:
         return getAvgExecutionPrice(orderId) - execStats[orderId].expectedPrice;
     }
 
+    double getSharpe() {
+        if (pnlHistory.size() < 2) return 0;
+        vector<double> returns;
+        for (int i = 1; i < pnlHistory.size(); i++) {
+            returns.push_back(pnlHistory[i] - pnlHistory[i-1]);
+        }
+        double mean = 0;
+        for (double r : returns) mean += r;
+        mean /= returns.size();
+        double var = 0;
+        for (double r : returns) var += (r - mean)*(r - mean);
+        var /= returns.size();
+        double stddev = sqrt(var);
+        if (stddev == 0) return 0;
+        return mean / stddev;
+    }
+
     void printStats(OrderBook &ob) {
         for (auto &p : execStats) {
             cout << "Order " << p.first
              << " | AvgPx: " << getAvgExecutionPrice(p.first)
              << " | FillRate: " << getFillRate(p.first)
              << " | Slippage: " << getSlippage(p.first)
+             << " | Sharpe ratio: " << getSharpe()
              << endl;
         }
         cout << "Final Position: " << position << endl;
@@ -635,12 +671,30 @@ public:
         return getAvgExecutionPrice(orderId) - execStats[orderId].expectedPrice;
     }
 
+    double getSharpe() {
+        if (pnlHistory.size() < 2) return 0;
+        vector<double> returns;
+        for (int i = 1; i < pnlHistory.size(); i++) {
+            returns.push_back(pnlHistory[i] - pnlHistory[i-1]);
+        }
+        double mean = 0;
+        for (double r : returns) mean += r;
+        mean /= returns.size();
+        double var = 0;
+        for (double r : returns) var += (r - mean)*(r - mean);
+        var /= returns.size();
+        double stddev = sqrt(var);
+        if (stddev == 0) return 0;
+        return mean / stddev;
+    }
+
     void printStats(OrderBook &ob) {
         for (auto &p : execStats) {
             cout << "Order " << p.first
              << " | AvgPx: " << getAvgExecutionPrice(p.first)
              << " | FillRate: " << getFillRate(p.first)
              << " | Slippage: " << getSlippage(p.first)
+             << " | Sharpe ratio: " << getSharpe()
              << endl;
         }
         cout << "Final Position: " << position << endl;
@@ -776,12 +830,30 @@ public:
         return getAvgExecutionPrice(orderId) - execStats[orderId].expectedPrice;
     }
 
+    double getSharpe() {
+        if (pnlHistory.size() < 2) return 0;
+        vector<double> returns;
+        for (int i = 1; i < pnlHistory.size(); i++) {
+            returns.push_back(pnlHistory[i] - pnlHistory[i-1]);
+        }
+        double mean = 0;
+        for (double r : returns) mean += r;
+        mean /= returns.size();
+        double var = 0;
+        for (double r : returns) var += (r - mean)*(r - mean);
+        var /= returns.size();
+        double stddev = sqrt(var);
+        if (stddev == 0) return 0;
+        return mean / stddev;
+    }
+
     void printStats(OrderBook &ob) {
         for (auto &p : execStats) {
             cout << "Order " << p.first
              << " | AvgPx: " << getAvgExecutionPrice(p.first)
              << " | FillRate: " << getFillRate(p.first)
              << " | Slippage: " << getSlippage(p.first)
+             << " | Sharpe ratio: " << getSharpe()
              << endl;
         }
         cout << "Final Position: " << position << endl;
