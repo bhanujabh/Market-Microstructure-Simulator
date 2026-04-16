@@ -61,6 +61,9 @@ class Strategy {
 public:
     virtual void onEvent(OrderBook &ob) = 0;
     virtual void onTrade(const Trade& t, OrderBook &ob) = 0;
+    vector<double> pnlHistory;
+    double maxPnL = -1e9;
+    double maxDrawdown = 0;
 };
 
 class OrderBook {
@@ -344,6 +347,10 @@ public:
         }
         
         cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
+        double pnl = getPnL(ob);
+        pnlHistory.push_back(pnl);
+        if (pnl > maxPnL) maxPnL = pnl;
+        maxDrawdown = max(maxDrawdown, maxPnL - pnl);
     }
 
     double getPnL(OrderBook &ob) {
@@ -459,6 +466,11 @@ public:
         } 
 
         cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
+
+        double pnl = getPnL(ob);
+        pnlHistory.push_back(pnl);
+        if (pnl > maxPnL) maxPnL = pnl;
+        maxDrawdown = max(maxDrawdown, maxPnL - pnl);
     }
 
     double getPnL(OrderBook &ob) {
@@ -572,6 +584,11 @@ public:
             myOrders.insert(id);
             ob.addOrder({id, SELL, MARKET, 0, 1});
         }
+
+        double pnl = getPnL(ob);
+        pnlHistory.push_back(pnl);
+        if (pnl > maxPnL) maxPnL = pnl;
+        maxDrawdown = max(maxDrawdown, maxPnL - pnl);
     }
 
     void onEvent(OrderBook &ob) override {
@@ -726,6 +743,11 @@ public:
         } 
         
         cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
+
+        double pnl = getPnL(ob);
+        pnlHistory.push_back(pnl);
+        if (pnl > maxPnL) maxPnL = pnl;
+        maxDrawdown = max(maxDrawdown, maxPnL - pnl);
     }
 
     double getPnL(OrderBook &ob) {
