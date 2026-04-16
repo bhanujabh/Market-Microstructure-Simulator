@@ -231,6 +231,23 @@ public:
             isStrategyRunning = false; // allow future calls
         }
     }
+
+    void replayTrades() {
+        cout << "\n--- Replay ---\n";
+        for (auto &t : trades) {
+            cout << "Trade: "
+             << t.quantity << " @ " << t.price
+             << " | BuyID: " << t.buyId
+             << " | SellID: " << t.sellId << endl;
+        }
+    }
+};
+
+struct ExecutionStats {
+    double totalValue = 0;
+    int filledQty = 0;
+    int intendedQty = 0;
+    int expectedPrice = 0; // this should be double 
 };
 
 class SpreadStrategy : public Strategy {
@@ -249,6 +266,10 @@ public:
 
     double cash = 0;     // money earned/spent
 
+    unordered_map<int, ExecutionStats> execStats;
+
+    double inventoryPenalty = 0.1;
+
     void onEvent(OrderBook &ob) override {
         if (ob.bids.empty() || ob.asks.empty()) return;
 
@@ -260,12 +281,18 @@ public:
         // limit order → might not fill but market order → guaranteed execution 
         if (position >= maxPosition) {
             cout << "Reducing long position\n";
-            ob.addOrder({nextId++, SELL, MARKET, 0, 1});
+            int id = nextId++;
+            myOrders.insert(id);
+            execStats[id] = {0, 0, 1, bestBid}; // or mid
+            ob.addOrder({id, SELL, MARKET, 0, 1});
             return; // stop further trading
         }
         if (position <= -maxPosition) {
             cout << "Reducing short position\n";
-            ob.addOrder({nextId++, BUY, MARKET, 0, 1});
+            int id = nextId++;
+            myOrders.insert(id);
+            execStats[id] = {0, 0, 1, bestAsk}; // or mid
+            ob.addOrder({id, BUY, MARKET, 0, 1});
             return;
         }
 
@@ -284,24 +311,38 @@ public:
         if (allowBuy) {
             buyOrderId = nextId++;
             myOrders.insert(buyOrderId);
+            execStats[buyOrderId] = {0, 0, 1, bestBid};  // expected price
             ob.addOrder({buyOrderId, BUY, LIMIT, bestBid, 1});
         }
 
         if (allowSell) {
             sellOrderId = nextId++;
             myOrders.insert(sellOrderId);
+            execStats[sellOrderId] = {0, 0, 1, bestAsk};  // expected price
             ob.addOrder({sellOrderId, SELL, LIMIT, bestAsk, 1});
         }
     }
     void onTrade(const Trade& t, OrderBook &ob) override {
-        if (myOrders.count(t.buyId)){
+        // Execution stats
+        if (execStats.count(t.buyId)) {
+            execStats[t.buyId].totalValue += t.price * t.quantity;
+            execStats[t.buyId].filledQty += t.quantity;
+        }
+        if (execStats.count(t.sellId)) {
+            execStats[t.sellId].totalValue += t.price * t.quantity;
+            execStats[t.sellId].filledQty += t.quantity;
+        } 
+
+        // Position + cash (YOU MISSED THIS)
+        if (myOrders.count(t.buyId)) {
             position += t.quantity;
             cash -= t.price * t.quantity;
-        } 
-        if (myOrders.count(t.sellId)){
+        }
+        if (myOrders.count(t.sellId)) {
             position -= t.quantity;
             cash += t.price * t.quantity;
-        } 
+        }
+        
         cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
     }
 
@@ -313,10 +354,32 @@ public:
             int bestAsk = ob.asks.begin()->first;
             mid = (bestBid + bestAsk) / 2.0;
         }
-        return cash + position * mid;
+        return cash + position * mid - inventoryPenalty * abs(position);
+    }
+
+    double getAvgExecutionPrice(int orderId) {
+        auto &s = execStats[orderId];
+        if (s.filledQty == 0) return 0;
+        return s.totalValue / s.filledQty;
+    }
+    
+    double getFillRate(int orderId) {
+        auto &s = execStats[orderId];
+        return (double)s.filledQty / s.intendedQty;
+    }
+    
+    double getSlippage(int orderId) {
+        return getAvgExecutionPrice(orderId) - execStats[orderId].expectedPrice;
     }
 
     void printStats(OrderBook &ob) {
+        for (auto &p : execStats) {
+            cout << "Order " << p.first
+             << " | AvgPx: " << getAvgExecutionPrice(p.first)
+             << " | FillRate: " << getFillRate(p.first)
+             << " | Slippage: " << getSlippage(p.first)
+             << endl;
+        }
         cout << "Final Position: " << position << endl;
         cout << "Cash: " << cash << endl;
         cout << "PnL: " << getPnL(ob) << endl;
@@ -333,6 +396,10 @@ public:
 
     double cash = 0;     // money earned/spent
 
+    unordered_map<int, ExecutionStats> execStats;
+
+    double inventoryPenalty = 0.1;
+
     void onEvent(OrderBook &ob) override {
         int bidQty = 0, askQty = 0;
 
@@ -346,11 +413,17 @@ public:
 
         // RISK MANAGEMENT FIRST
         if (position >= maxPosition) {
-            ob.addOrder({nextId++, SELL, MARKET, 0, 1});
+            int id = nextId++;
+            myOrders.insert(id);
+            execStats[id] = {0, 0, 1, 0};  // MARKET → expected price ~ mid
+            ob.addOrder({id, SELL, MARKET, 0, 1});
             return;
         }
         if (position <= -maxPosition) {
-            ob.addOrder({nextId++, BUY, MARKET, 0, 1});
+            int id = nextId++;
+            myOrders.insert(id);
+            execStats[id] = {0, 0, 1, 0};  // MARKET → expected price ~ mid
+            ob.addOrder({id, BUY, MARKET, 0, 1});
             return;
         }
         
@@ -358,13 +431,24 @@ public:
         int id = nextId++;
         if (imbalance > 0.7) {
             myOrders.insert(id);
+            execStats[id] = {0, 0, 1, 0};  // MARKET → expected price ~ mid
             ob.addOrder({id, BUY, MARKET, 0, 1});
         } else if (imbalance < 0.3) {
             myOrders.insert(id);
+            execStats[id] = {0, 0, 1, 0};  // MARKET → expected price ~ mid
             ob.addOrder({id, SELL, MARKET, 0, 1});
         }
     }
     void onTrade(const Trade& t, OrderBook &ob) override {
+        if (execStats.count(t.buyId)) {
+            execStats[t.buyId].totalValue += t.price * t.quantity;
+            execStats[t.buyId].filledQty += t.quantity;
+        }
+        if (execStats.count(t.sellId)) {
+            execStats[t.sellId].totalValue += t.price * t.quantity;
+            execStats[t.sellId].filledQty += t.quantity;
+        }
+
         if (myOrders.count(t.buyId)){
             position += t.quantity;
             cash -= t.price * t.quantity;
@@ -385,10 +469,32 @@ public:
             int bestAsk = ob.asks.begin()->first;
             mid = (bestBid + bestAsk) / 2.0;
         }
-        return cash + position * mid;
+        return cash + position * mid - inventoryPenalty * abs(position);
+    }
+
+    double getAvgExecutionPrice(int orderId) {
+        auto &s = execStats[orderId];
+        if (s.filledQty == 0) return 0;
+        return s.totalValue / s.filledQty;
+    }
+    
+    double getFillRate(int orderId) {
+        auto &s = execStats[orderId];
+        return (double)s.filledQty / s.intendedQty;
+    }
+    
+    double getSlippage(int orderId) {
+        return getAvgExecutionPrice(orderId) - execStats[orderId].expectedPrice;
     }
 
     void printStats(OrderBook &ob) {
+        for (auto &p : execStats) {
+            cout << "Order " << p.first
+             << " | AvgPx: " << getAvgExecutionPrice(p.first)
+             << " | FillRate: " << getFillRate(p.first)
+             << " | Slippage: " << getSlippage(p.first)
+             << endl;
+        }
         cout << "Final Position: " << position << endl;
         cout << "Cash: " << cash << endl;
         cout << "PnL: " << getPnL(ob) << endl;
@@ -407,8 +513,21 @@ public:
 
     double cash = 0;     // money earned/spent
 
+    unordered_map<int, ExecutionStats> execStats;
+
+    double inventoryPenalty = 0.1;
+
     void onTrade(const Trade& t, OrderBook &ob) override {
         prices.push_back(t.price);
+
+        if (execStats.count(t.buyId)) {
+            execStats[t.buyId].totalValue += t.price * t.quantity;
+            execStats[t.buyId].filledQty += t.quantity;
+        }
+        if (execStats.count(t.sellId)) {
+            execStats[t.sellId].totalValue += t.price * t.quantity;
+            execStats[t.sellId].filledQty += t.quantity;
+        }
 
         if (myOrders.count(t.buyId)){
             position += t.quantity;
@@ -428,6 +547,7 @@ public:
             cout << "Reducing long\n";
             int id = nextId++;
             myOrders.insert(id);
+            execStats[id] = {0, 0, 1, t.price};  // expected price
             ob.addOrder({id, SELL, MARKET, 0, 1});
             return;
         }
@@ -441,6 +561,7 @@ public:
             cout << "Momentum BUY signal\n";
             int id = nextId++;
             myOrders.insert(id);
+            execStats[id] = {0, 0, 1, t.price};  // expected price
             ob.addOrder({id, BUY, MARKET, 0, 1});
         }
 
@@ -479,10 +600,32 @@ public:
             int bestAsk = ob.asks.begin()->first;
             mid = (bestBid + bestAsk) / 2.0;
         }
-        return cash + position * mid;
+        return cash + position * mid - inventoryPenalty * abs(position);
+    }
+
+    double getAvgExecutionPrice(int orderId) {
+        auto &s = execStats[orderId];
+        if (s.filledQty == 0) return 0;
+        return s.totalValue / s.filledQty;
+    }
+    
+    double getFillRate(int orderId) {
+        auto &s = execStats[orderId];
+        return (double)s.filledQty / s.intendedQty;
+    }
+    
+    double getSlippage(int orderId) {
+        return getAvgExecutionPrice(orderId) - execStats[orderId].expectedPrice;
     }
 
     void printStats(OrderBook &ob) {
+        for (auto &p : execStats) {
+            cout << "Order " << p.first
+             << " | AvgPx: " << getAvgExecutionPrice(p.first)
+             << " | FillRate: " << getFillRate(p.first)
+             << " | Slippage: " << getSlippage(p.first)
+             << endl;
+        }
         cout << "Final Position: " << position << endl;
         cout << "Cash: " << cash << endl;
         cout << "PnL: " << getPnL(ob) << endl;
@@ -505,6 +648,10 @@ public:
 
     double cash = 0;     // money earned/spent
 
+    unordered_map<int, ExecutionStats> execStats;
+
+    double inventoryPenalty = 0.1;
+    
     void onEvent(OrderBook &ob) override {
         if (ob.bids.empty() || ob.asks.empty()) return;
 
@@ -518,11 +665,25 @@ public:
 
         // RISK FIRST
         if (position >= maxPosition) {
-            ob.addOrder({nextId++, SELL, MARKET, 0, 1});
+            int id = nextId++;
+            myOrders.insert(id);
+
+            // for research level analysis
+            // double mid = (bestBid + bestAsk) / 2.0;
+            // neutral baseline
+            // double expectedPrice = mid;
+
+            // bestBid / bestAsk => execution slippage
+            // mid => market impact slippage
+            double expectedPrice = bestBid;  // SELL → hits bid
+            execStats[id] = {0, 0, 1, bestBid};
+            ob.addOrder({id, SELL, MARKET, 0, 1});
             return;
         }
         if (position <= -maxPosition) {
-            ob.addOrder({nextId++, BUY, MARKET, 0, 1});
+            int id = nextId++;
+            execStats[id] = {0, 0, 1, bestAsk};
+            ob.addOrder({id, BUY, MARKET, 0, 1});
             return;
         }
 
@@ -539,11 +700,22 @@ public:
 
         cout << "Market Making...\n";
 
+        execStats[buyOrderId] = {0, 0, 1, buyPrice};
         ob.addOrder({buyOrderId, BUY, LIMIT, buyPrice, 1});
+        execStats[sellOrderId] = {0, 0, 1, sellPrice};
         ob.addOrder({sellOrderId, SELL, LIMIT, sellPrice, 1});
     } 
 
     void onTrade(const Trade& t, OrderBook &ob) override { 
+        if (execStats.count(t.buyId)) {
+            execStats[t.buyId].totalValue += t.price * t.quantity;
+            execStats[t.buyId].filledQty += t.quantity;
+        }
+        if (execStats.count(t.sellId)) {
+            execStats[t.sellId].totalValue += t.price * t.quantity;
+            execStats[t.sellId].filledQty += t.quantity;
+        }
+
         if (myOrders.count(t.buyId)) {
             position += t.quantity;
             cash -= t.price * t.quantity;
@@ -564,10 +736,32 @@ public:
             int bestAsk = ob.asks.begin()->first;
             mid = (bestBid + bestAsk) / 2.0;
         }
-        return cash + position * mid;
+        return cash + position * mid - inventoryPenalty * abs(position);
+    }
+
+    double getAvgExecutionPrice(int orderId) {
+        auto &s = execStats[orderId];
+        if (s.filledQty == 0) return 0;
+        return s.totalValue / s.filledQty;
+    }
+    
+    double getFillRate(int orderId) {
+        auto &s = execStats[orderId];
+        return (double)s.filledQty / s.intendedQty;
+    }
+    
+    double getSlippage(int orderId) {
+        return getAvgExecutionPrice(orderId) - execStats[orderId].expectedPrice;
     }
 
     void printStats(OrderBook &ob) {
+        for (auto &p : execStats) {
+            cout << "Order " << p.first
+             << " | AvgPx: " << getAvgExecutionPrice(p.first)
+             << " | FillRate: " << getFillRate(p.first)
+             << " | Slippage: " << getSlippage(p.first)
+             << endl;
+        }
         cout << "Final Position: " << position << endl;
         cout << "Cash: " << cash << endl;
         cout << "PnL: " << getPnL(ob) << endl;
