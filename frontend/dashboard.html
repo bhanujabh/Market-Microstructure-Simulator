@@ -1,0 +1,215 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quant Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+      body {
+        font-family: Arial;
+        background: #111;
+        color: #fff;
+        padding: 30px;
+        max-width: 1200px;
+        margin: auto;
+      }
+      .card {
+        background: #1c1c1c;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+      }
+      .metric {
+        font-size: 22px;
+        font-weight: bold;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        padding: 8px;
+        border-bottom: 1px solid #333;
+        text-align: left;
+      }
+      button {
+        padding: 8px 12px;
+        margin-right: 8px;
+        background: #333;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 6px;
+      }
+      button:hover {
+        background: #555;
+      }
+      .heat {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 4px;
+      }
+      .box {
+        height: 28px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Market Microstructure Dashboard</h1>
+
+    <div class="grid" id="metrics"></div>
+
+    <div class="card">
+      <h3>Strategy Selector</h3>
+      <div id="buttons"></div>
+    </div>
+
+    <div class="card">
+      <h3>PnL Graph</h3>
+      <canvas id="pnlChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>Strategy Stats</h3>
+      <div id="stats"></div>
+    </div>
+
+    <div class="card">
+      <h3>Order Book</h3>
+      <div class="grid">
+        <div>
+          <h4>Bids</h4>
+          <table id="bids"></table>
+        </div>
+        <div>
+          <h4>Asks</h4>
+          <table id="asks"></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Trades</h3>
+      <table id="trades"></table>
+    </div>
+
+    <div class="card">
+      <h3>Heatmap (Snapshots)</h3>
+      <div id="heatmap" class="heat"></div>
+    </div>
+
+    <script>
+      let chart;
+
+      fetch("../cpp_simulator/output.json")
+        .then((r) => r.json())
+        .then((data) => {
+          renderMetrics(data.metrics);
+          renderBook(data.bids, data.asks);
+          renderTrades(data.trades);
+          renderHeatmap(data.snapshots);
+          renderButtons(data.strategies);
+
+          loadStrategy("Spread", data.strategies);
+        });
+
+      function renderMetrics(m) {
+        document.getElementById("metrics").innerHTML = `
+<div class="card">Best Bid<div class="metric">${m.bestBid}</div></div>
+<div class="card">Best Ask<div class="metric">${m.bestAsk}</div></div>
+<div class="card">Spread<div class="metric">${m.spread}</div></div>
+<div class="card">Trades<div class="metric">${m.tradeCount}</div></div>
+`;
+      }
+
+      function renderBook(bids, asks) {
+        let b = `<tr><th>Price</th><th>Qty</th></tr>`;
+        bids.forEach(
+          (x) => (b += `<tr><td>${x.price}</td><td>${x.qty}</td></tr>`),
+        );
+        document.getElementById("bids").innerHTML = b;
+
+        let a = `<tr><th>Price</th><th>Qty</th></tr>`;
+        asks.forEach(
+          (x) => (a += `<tr><td>${x.price}</td><td>${x.qty}</td></tr>`),
+        );
+        document.getElementById("asks").innerHTML = a;
+      }
+
+      function renderTrades(t) {
+        let h = `<tr><th>Price</th><th>Qty</th><th>Buy</th><th>Sell</th></tr>`;
+        t.forEach((x) => {
+          h += `<tr>
+<td>${x.price}</td>
+<td>${x.qty}</td>
+<td>${x.buyId}</td>
+<td>${x.sellId}</td>
+</tr>`;
+        });
+
+        document.getElementById("trades").innerHTML = h;
+      }
+
+      function renderButtons(strats) {
+        let html = "";
+        for (let k in strats) {
+          html += `<button onclick='loadStrategy("${k}",strategies)'>${k}</button>`;
+        }
+        document.getElementById("buttons").innerHTML = html;
+        window.strategies = strats;
+      }
+
+      function loadStrategy(name, strats) {
+        let s = strats[name];
+
+        document.getElementById("stats").innerHTML = `
+<div class="grid">
+<div class="card">PnL<div class="metric">${s.pnl.toFixed(2)}</div></div>
+<div class="card">Sharpe<div class="metric">${s.sharpe.toFixed(2)}</div></div>
+<div class="card">Drawdown<div class="metric">${s.drawdown.toFixed(2)}</div></div>
+<div class="card">Trades<div class="metric">${s.trades}</div></div>
+</div>
+`;
+
+        drawChart(name, s.pnlHistory);
+      }
+
+      function drawChart(name, data) {
+        if (chart) chart.destroy();
+
+        chart = new Chart(document.getElementById("pnlChart"), {
+          type: "line",
+          data: {
+            labels: data.map((_, i) => i + 1),
+            datasets: [
+              {
+                label: name + " PnL",
+                data: data,
+                borderWidth: 2,
+              },
+            ],
+          },
+        });
+      }
+
+      function renderHeatmap(snap) {
+        let h = "";
+        snap.forEach((x) => {
+          let val = (x.bidDepth + x.askDepth) * 25;
+          h += `<div class="box" style="background:rgb(${val},50,150)" title="t=${x.timestamp}"></div>`;
+        });
+
+        document.getElementById("heatmap").innerHTML = h;
+      }
+    </script>
+  </body>
+</html>
