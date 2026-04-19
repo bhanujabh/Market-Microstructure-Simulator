@@ -4,6 +4,7 @@
 #include <list>
 #include <unordered_map>
 #include <unordered_set>
+#include <fstream>
 
 using namespace std;
 
@@ -1135,112 +1136,154 @@ void executeMarketSell(OrderBook &ob, Order* marketOrder) {
 }
 
 int main() {
-    // ─── Test 1: Basic limit order matching ───
-    OrderBook ob1;
-    cout << "\n=== Test 1: Limit Order Matching ===\n";
-    ob1.addOrder({1, BUY,  LIMIT, 100, 10});
-    ob1.addOrder({2, BUY,  LIMIT,  98,  5});
-    ob1.addOrder({3, SELL, LIMIT, 100,  4});  // matches with order 1 at 100
-    ob1.addOrder({4, SELL, LIMIT,  99,  3});  // matches with order 1 (remaining qty)
-    ob1.replayTrades();
 
-    // ─── Test 2: Market orders ───
-    OrderBook ob2;
-    cout << "\n=== Test 2: Market Orders ===\n";
-    ob2.addOrder({1, BUY,  LIMIT, 100, 10});
-    ob2.addOrder({2, BUY,  LIMIT,  98,  5});
-    ob2.addOrder({3, SELL, LIMIT, 105,  8});
-    ob2.addOrder({4, BUY,  MARKET,  0,  5});  // eats into asks
-    ob2.addOrder({5, SELL, MARKET,  0,  6});  // eats into bids
-    ob2.replayTrades();
+    auto runScenario = [](OrderBook &ob) {
+        ob.addOrder({1, BUY, LIMIT, 100, 10});
+        ob.addOrder({2, BUY, LIMIT, 99, 8});
+        ob.addOrder({3, BUY, LIMIT, 98, 7});
 
-    // ─── Test 3: Cancel and modify ───
-    OrderBook ob3;
-    cout << "\n=== Test 3: Cancel + Modify ===\n";
-    ob3.addOrder({1, BUY,  LIMIT, 100, 10});
-    ob3.addOrder({2, BUY,  LIMIT,  98,  5});
-    ob3.addOrder({3, SELL, LIMIT, 110,  8});
-    ob3.cancelOrder(2);                          // cancel order 2
-    ob3.modifyOrder(1, 100, 3);                  // reduce qty → no priority loss
-    ob3.modifyOrder(3, 105, 8);                  // price change → cancel + re-add, triggers match
-    ob3.replayTrades();
+        ob.addOrder({4, SELL, LIMIT, 103, 9});
+        ob.addOrder({5, SELL, LIMIT, 104, 6});
+        ob.addOrder({6, SELL, LIMIT, 105, 12});
 
-    // ─── Test 4: Snapshots ───
-    OrderBook ob4;
-    cout << "\n=== Test 4: Snapshots ===\n";
-    ob4.addOrder({1, BUY,  LIMIT, 100, 10});
-    ob4.addOrder({2, SELL, LIMIT, 105,  5});
-    ob4.takeSnapshot(1);
-    ob4.addOrder({3, BUY,  LIMIT,  98,  8});
-    ob4.addOrder({4, SELL, LIMIT, 103,  3});
-    ob4.takeSnapshot(2);
-    ob4.addOrder({5, SELL, MARKET,  0,  5});     // eats bids
-    ob4.takeSnapshot(3);
-    ob4.printSnapshots();
+        ob.addOrder({7, BUY, MARKET, 0, 3});
+        ob.addOrder({8, SELL, MARKET, 0, 2});
 
-    // ─── Test 5: SpreadStrategy ───
-    cout << "\n=== Test 5: SpreadStrategy ===\n";
-    {
-        OrderBook ob;
-        SpreadStrategy strat;
-        ob.strategy = &strat;
-        ob.addOrder({1, BUY,  LIMIT, 100, 10});
-        ob.addOrder({2, BUY,  LIMIT,  97,  5});
-        ob.addOrder({3, SELL, LIMIT, 106,  8});  // spread=6, triggers strategy
-        ob.addOrder({4, SELL, LIMIT, 104,  3});
-        ob.addOrder({5, BUY,  MARKET,  0,  2}); // causes trade → onTrade fires
-        strat.printStats(ob);
-        ob.replayTrades();
+        ob.modifyOrder(2, 99, 5);
+        ob.cancelOrder(3);
+
+        ob.takeSnapshot(100);
+
+        ob.addOrder({9, BUY, LIMIT, 101, 4});
+        ob.addOrder({10, SELL, LIMIT, 102, 3});
+
+        ob.takeSnapshot(200);
+
+        ob.addOrder({11, BUY, MARKET, 0, 5});
+        ob.addOrder({12, SELL, MARKET, 0, 4});
+
+        ob.takeSnapshot(300);
+    };
+
+    // ---------- MASTER BOOK ----------
+    OrderBook base;
+    runScenario(base);
+
+    // ---------- STRATEGIES ----------
+    SpreadStrategy spread;
+    ImbalanceStrategy imbalance;
+    MomentumStrategy momentum;
+    MarketMakingStrategy mm;
+
+    OrderBook ob1; ob1.strategy = &spread; runScenario(ob1);
+    OrderBook ob2; ob2.strategy = &imbalance; runScenario(ob2);
+    OrderBook ob3; ob3.strategy = &momentum; runScenario(ob3);
+    OrderBook ob4; ob4.strategy = &mm; runScenario(ob4);
+
+    // ---------- EXPORT ----------
+    ofstream f("output.json");
+
+    f << "{";
+
+    // METRICS
+    int bestBid = base.bids.empty() ? 0 : base.bids.begin()->first;
+    int bestAsk = base.asks.empty() ? 0 : base.asks.begin()->first;
+    int spreadVal = (bestBid && bestAsk) ? bestAsk - bestBid : 0;
+
+    f << "\"metrics\":{";
+    f << "\"bestBid\":" << bestBid << ",";
+    f << "\"bestAsk\":" << bestAsk << ",";
+    f << "\"spread\":" << spreadVal << ",";
+    f << "\"tradeCount\":" << base.trades.size();
+    f << "},";
+
+    // BIDS
+    f << "\"bids\":[";
+    bool first = true;
+    for (auto &[price, lvl] : base.bids) {
+        int qty = 0;
+        for (auto o : lvl) qty += o->quantity;
+
+        if (!first) f << ",";
+        f << "{\"price\":" << price << ",\"qty\":" << qty << "}";
+        first = false;
     }
+    f << "],";
 
-    // ─── Test 6: ImbalanceStrategy ───
-    cout << "\n=== Test 6: ImbalanceStrategy ===\n";
-    {
-        OrderBook ob;
-        ImbalanceStrategy strat;
-        ob.strategy = &strat;
-        // heavy bid side → imbalance > 0.7 → strategy buys
-        ob.addOrder({1, BUY,  LIMIT, 100, 50});
-        ob.addOrder({2, BUY,  LIMIT,  99, 30});
-        ob.addOrder({3, SELL, LIMIT, 105,  5});  // small ask side
-        ob.addOrder({4, SELL, MARKET,  0,  3});  // trigger onEvent via trade
-        strat.printStats(ob);
-    }
+    // ASKS
+    f << "\"asks\":[";
+    first = true;
+    for (auto &[price, lvl] : base.asks) {
+        int qty = 0;
+        for (auto o : lvl) qty += o->quantity;
 
-    // ─── Test 7: MomentumStrategy (needs trade history) ───
-    cout << "\n=== Test 7: MomentumStrategy ===\n";
-    {
-        OrderBook ob;
-        MomentumStrategy strat;
-        ob.strategy = &strat;
-        // create ascending trades to trigger momentum BUY signal
-        ob.addOrder({1,  BUY,  LIMIT, 100, 5});
-        ob.addOrder({2,  SELL, LIMIT, 100, 2});  // trade @ 100
-        ob.addOrder({3,  BUY,  LIMIT, 102, 5});
-        ob.addOrder({4,  SELL, LIMIT, 102, 2});  // trade @ 102
-        ob.addOrder({5,  BUY,  LIMIT, 104, 5});
-        ob.addOrder({6,  SELL, LIMIT, 104, 2});  // trade @ 104 → uptrend detected
-        ob.addOrder({7,  BUY,  LIMIT,  96, 5});
-        ob.addOrder({8,  SELL, LIMIT,  96, 2});  // trade @ 96  → downtrend check
-        ob.addOrder({9,  BUY,  LIMIT,  94, 5});
-        ob.addOrder({10, SELL, LIMIT,  94, 2});  // trade @ 94  → SELL signal
-        strat.printStats(ob);
-        ob.replayTrades();
+        if (!first) f << ",";
+        f << "{\"price\":" << price << ",\"qty\":" << qty << "}";
+        first = false;
     }
+    f << "],";
 
-    // ─── Test 8: MarketMakingStrategy ───
-    cout << "\n=== Test 8: MarketMakingStrategy ===\n";
-    {
-        OrderBook ob;
-        MarketMakingStrategy strat;
-        ob.strategy = &strat;
-        ob.addOrder({1, BUY,  LIMIT, 100, 10});
-        ob.addOrder({2, SELL, LIMIT, 106,  8});  // mid=103, MM quotes 101/105
-        ob.addOrder({3, BUY,  MARKET,  0,  2});  // hits MM's sell quote
-        ob.addOrder({4, SELL, MARKET,  0,  2});  // hits MM's buy quote
-        strat.printStats(ob);
-        ob.replayTrades();
+    // TRADES
+    f << "\"trades\":[";
+    first = true;
+    for (auto &t : base.trades) {
+        if (!first) f << ",";
+        f << "{";
+        f << "\"price\":" << t.price << ",";
+        f << "\"qty\":" << t.quantity << ",";
+        f << "\"buyId\":" << t.buyId << ",";
+        f << "\"sellId\":" << t.sellId << ",";
+        f << "\"timestamp\":" << t.timestamp;
+        f << "}";
+        first = false;
     }
+    f << "],";
+
+    // SNAPSHOTS
+    f << "\"snapshots\":[";
+    first = true;
+    for (auto &s : base.snapshots) {
+        if (!first) f << ",";
+        f << "{";
+        f << "\"timestamp\":" << s.timestamp << ",";
+        f << "\"bidDepth\":" << s.bidLevels.size() << ",";
+        f << "\"askDepth\":" << s.askLevels.size();
+        f << "}";
+        first = false;
+    }
+    f << "],";
+
+    // STRATEGIES
+    f << "\"strategies\":{";
+
+    auto writeStrat = [&](string name, Strategy &st, OrderBook &ob, bool comma) {
+        f << "\"" << name << "\":{";
+        f << "\"pnl\":" << ((SpreadStrategy&)st).getPnL(ob) << ",";
+        f << "\"sharpe\":" << ((SpreadStrategy&)st).getSharpe() << ",";
+        f << "\"drawdown\":" << st.maxDrawdown << ",";
+        f << "\"trades\":" << st.pnlHistory.size() << ",";
+        f << "\"pnlHistory\":[";
+        for (int i = 0; i < st.pnlHistory.size(); i++) {
+            if (i) f << ",";
+            f << st.pnlHistory[i];
+        }
+        f << "]";
+        f << "}";
+        if (comma) f << ",";
+    };
+
+    writeStrat("Spread", spread, ob1, true);
+    writeStrat("Imbalance", imbalance, ob2, true);
+    writeStrat("Momentum", momentum, ob3, true);
+    writeStrat("MarketMaking", mm, ob4, false);
+
+    f << "}";
+
+    f << "}";
+
+    f.close();
+
+    cout << "output.json generated.\n";
 
     return 0;
 }
