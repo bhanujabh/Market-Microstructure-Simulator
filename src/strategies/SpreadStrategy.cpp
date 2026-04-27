@@ -5,17 +5,6 @@
 
 using namespace std;
 
-static double getMidPrice(OrderBook &ob)
-{
-    if (!ob.bids.empty() && !ob.asks.empty())
-    {
-        int bestBid = ob.bids.begin()->first;
-        int bestAsk = ob.asks.begin()->first;
-        return (bestBid + bestAsk) / 2.0;
-    }
-    return 0;
-}
-
 void SpreadStrategy::onEvent(OrderBook &ob)
 {
     if (ob.bids.empty() || ob.asks.empty())
@@ -24,25 +13,34 @@ void SpreadStrategy::onEvent(OrderBook &ob)
     int bestBid = ob.bids.begin()->first;
     int bestAsk = ob.asks.begin()->first;
 
+    // Kill switch
+    if (risk.killSwitch(currentPnL(ob)))
+    {
+        cout << "Risk Kill Switch Triggered\n";
+        return;
+    }
+
     // too much inventory → sell immediately to reduce risk
     // Why MARKET order? SELL, MARKET -> Because: want to exit immediately
     // limit order → might not fill but market order → guaranteed execution
-    if (position >= maxPosition)
+    if (!risk.allowBuy(position))
     {
         cout << "Reducing long position\n";
         int id = nextId++;
         myOrders.insert(id);
         execStats[id] = {0, 0, 1, bestBid}; // or mid
-        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1});
+        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0});
         return; // stop further trading
     }
-    if (position <= -maxPosition)
+    // Reduce short inventory
+    if (!risk.allowSell(position))
     {
         cout << "Reducing short position\n";
+
         int id = nextId++;
         myOrders.insert(id);
-        execStats[id] = {0, 0, 1, bestAsk}; // or mid
-        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1});
+        execStats[id] = {0, 0, 1, bestAsk};
+        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1, 0});
         return;
     }
 
@@ -51,8 +49,8 @@ void SpreadStrategy::onEvent(OrderBook &ob)
     cout << "Strategy triggered\n";
 
     // RISK CHECKS
-    bool allowBuy = (position < maxPosition);
-    bool allowSell = (position > -maxPosition);
+    bool allowBuy = risk.allowBuy(position);
+    bool allowSell = risk.allowSell(position);
 
     // cancel previous orders to avoid spam
     if (buyOrderId != -1)
@@ -66,7 +64,7 @@ void SpreadStrategy::onEvent(OrderBook &ob)
         buyOrderId = nextId++;
         myOrders.insert(buyOrderId);
         execStats[buyOrderId] = {0, 0, 1, bestBid}; // expected price
-        ob.addOrder({buyOrderId, Side::BUY, OrderType::LIMIT, bestBid, 1});
+        ob.addOrder({buyOrderId, Side::BUY, OrderType::LIMIT, bestBid, 1, 0});
     }
 
     if (allowSell)
@@ -74,7 +72,7 @@ void SpreadStrategy::onEvent(OrderBook &ob)
         sellOrderId = nextId++;
         myOrders.insert(sellOrderId);
         execStats[sellOrderId] = {0, 0, 1, bestAsk}; // expected price
-        ob.addOrder({sellOrderId, Side::SELL, OrderType::LIMIT, bestAsk, 1});
+        ob.addOrder({sellOrderId, Side::SELL, OrderType::LIMIT, bestAsk, 1, 0});
     }
 }
 
@@ -129,14 +127,7 @@ void SpreadStrategy::onTrade(const Trade &t, OrderBook &ob)
 
     cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
 
-    double mid = getMidPrice(ob);
-
-    double pnl = Metrics::getPnL(
-        cash,
-        position,
-        mid,
-        inventoryPenalty);
-
+    double pnl = currentPnL(ob);
     pnlHistory.push_back(pnl);
 }
 
@@ -154,17 +145,11 @@ void SpreadStrategy::printStats(OrderBook &ob)
              << endl;
     }
 
-    double mid = getMidPrice(ob);
-
     cout << "Final Position: " << position << endl;
     cout << "Cash: " << cash << endl;
 
     cout << "PnL: "
-         << Metrics::getPnL(
-                cash,
-                position,
-                mid,
-                inventoryPenalty)
+         << currentPnL(ob)
          << endl;
 
     cout << "Drawdown: "

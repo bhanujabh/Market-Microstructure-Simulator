@@ -5,17 +5,6 @@
 
 using namespace std;
 
-static double getMidPrice(OrderBook &ob)
-{
-    if (!ob.bids.empty() && !ob.asks.empty())
-    {
-        int bestBid = ob.bids.begin()->first;
-        int bestAsk = ob.asks.begin()->first;
-        return (bestBid + bestAsk) / 2.0;
-    }
-    return 0;
-}
-
 void ImbalanceStrategy::onEvent(OrderBook &ob)
 {
     int bidQty = 0, askQty = 0;
@@ -33,21 +22,46 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
 
     double imbalance = (double)bidQty / (bidQty + askQty);
 
-    // RISK MANAGEMENT FIRST
-    if (position >= maxPosition)
+    if (risk.killSwitch(currentPnL(ob)))
     {
-        int id = nextId++;
-        myOrders.insert(id);
-        execStats[id] = {0, 0, 1, 0}; // MARKET → expected price ~ mid
-        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0});
+        cout << "Risk Kill Switch Triggered\n";
         return;
     }
-    if (position <= -maxPosition)
+
+    // RISK MANAGEMENT FIRST
+    // ===== CHANGED: use RiskManager instead of maxPosition =====
+    if (!risk.allowBuy(position))
     {
         int id = nextId++;
         myOrders.insert(id);
-        execStats[id] = {0, 0, 1, 0}; // MARKET → expected price ~ mid
-        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1, 0});
+
+        execStats[id] = {0, 0, 1, 0};
+
+        ob.addOrder({id,
+                     Side::SELL,
+                     OrderType::MARKET,
+                     0,
+                     1,
+                     0});
+
+        return;
+    }
+
+    // ===== CHANGED: use RiskManager instead of maxPosition =====
+    if (!risk.allowSell(position))
+    {
+        int id = nextId++;
+        myOrders.insert(id);
+
+        execStats[id] = {0, 0, 1, 0};
+
+        ob.addOrder({id,
+                     Side::BUY,
+                     OrderType::MARKET,
+                     0,
+                     1,
+                     0});
+
         return;
     }
 
@@ -55,15 +69,37 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
     int id = nextId++;
     if (imbalance > 0.7)
     {
-        myOrders.insert(id);
-        execStats[id] = {0, 0, 1, 0}; // MARKET → expected price ~ mid
-        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1, 0});
+        // MARKET → expected price ~ mid
+        if (risk.allowBuy(position))
+        {
+            myOrders.insert(id);
+
+            execStats[id] = {0, 0, 1, 0};
+
+            ob.addOrder({id,
+                         Side::BUY,
+                         OrderType::MARKET,
+                         0,
+                         1,
+                         0});
+        }
     }
     else if (imbalance < 0.3)
     {
-        myOrders.insert(id);
-        execStats[id] = {0, 0, 1, 0}; // MARKET → expected price ~ mid
-        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0});
+        // MARKET → expected price ~ mid
+        if (risk.allowSell(position))
+        {
+            myOrders.insert(id);
+
+            execStats[id] = {0, 0, 1, 0};
+
+            ob.addOrder({id,
+                         Side::SELL,
+                         OrderType::MARKET,
+                         0,
+                         1,
+                         0});
+        }
     }
 }
 
@@ -116,15 +152,7 @@ void ImbalanceStrategy::onTrade(const Trade &t, OrderBook &ob)
 
     cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
 
-    double mid = getMidPrice(ob);
-
-    double pnl = Metrics::getPnL(
-        cash,
-        position,
-        mid,
-        inventoryPenalty);
-
-    pnlHistory.push_back(pnl);
+    pnlHistory.push_back(currentPnL(ob));
 }
 
 void ImbalanceStrategy::printStats(OrderBook &ob)
@@ -147,11 +175,7 @@ void ImbalanceStrategy::printStats(OrderBook &ob)
     cout << "Cash: " << cash << endl;
 
     cout << "PnL: "
-         << Metrics::getPnL(
-                cash,
-                position,
-                mid,
-                inventoryPenalty)
+         << currentPnL(ob)
          << endl;
 
     cout << "Drawdown: "

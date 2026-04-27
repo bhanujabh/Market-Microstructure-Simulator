@@ -5,17 +5,6 @@
 
 using namespace std;
 
-static double getMidPrice(OrderBook &ob)
-{
-    if (!ob.bids.empty() && !ob.asks.empty())
-    {
-        int bestBid = ob.bids.begin()->first;
-        int bestAsk = ob.asks.begin()->first;
-        return (bestBid + bestAsk) / 2.0;
-    }
-    return 0;
-}
-
 void MarketMakingStrategy::onEvent(OrderBook &ob)
 {
     if (ob.bids.empty() || ob.asks.empty())
@@ -29,29 +18,36 @@ void MarketMakingStrategy::onEvent(OrderBook &ob)
     int buyPrice = mid - spread;
     int sellPrice = mid + spread;
 
+    if (risk.killSwitch(currentPnL(ob)))
+    {
+        cout << "Risk Kill Switch Triggered\n";
+        return;
+    }
+
     // RISK FIRST
-    if (position >= maxPosition)
+    // ===== CHANGED: use RiskManager instead of maxPosition =====
+    if (!risk.allowBuy(position))
     {
         int id = nextId++;
         myOrders.insert(id);
 
-        // for research level analysis
-        // double mid = (bestBid + bestAsk) / 2.0;
-        // neutral baseline
-        // double expectedPrice = mid;
-
-        // bestBid / bestAsk => execution slippage
-        // mid => market impact slippage
-        double expectedPrice = bestBid; // SELL → hits bid
         execStats[id] = {0, 0, 1, bestBid};
-        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1});
+
+        // ===== CHANGED: added 6th timestamp field =====
+        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0});
         return;
     }
-    if (position <= -maxPosition)
+
+    // ===== CHANGED: use RiskManager instead of maxPosition =====
+    if (!risk.allowSell(position))
     {
         int id = nextId++;
+        myOrders.insert(id); // ===== CHANGED: inserted missing myOrders =====
+
         execStats[id] = {0, 0, 1, bestAsk};
-        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1});
+
+        // ===== CHANGED: added 6th timestamp field =====
+        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1, 0});
         return;
     }
 
@@ -71,9 +67,9 @@ void MarketMakingStrategy::onEvent(OrderBook &ob)
     cout << "Market Making...\n";
 
     execStats[buyOrderId] = {0, 0, 1, buyPrice};
-    ob.addOrder({buyOrderId, Side::BUY, OrderType::LIMIT, buyPrice, 1});
+    ob.addOrder({buyOrderId, Side::BUY, OrderType::LIMIT, buyPrice, 1, 0});
     execStats[sellOrderId] = {0, 0, 1, sellPrice};
-    ob.addOrder({sellOrderId, Side::SELL, OrderType::LIMIT, sellPrice, 1});
+    ob.addOrder({sellOrderId, Side::SELL, OrderType::LIMIT, sellPrice, 1, 0});
 }
 
 void MarketMakingStrategy::onTrade(const Trade &t, OrderBook &ob)
@@ -125,15 +121,7 @@ void MarketMakingStrategy::onTrade(const Trade &t, OrderBook &ob)
 
     cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
 
-    double mid = getMidPrice(ob);
-
-    double pnl = Metrics::getPnL(
-        cash,
-        position,
-        mid,
-        inventoryPenalty);
-
-    pnlHistory.push_back(pnl);
+    pnlHistory.push_back(currentPnL(ob));
 }
 
 void MarketMakingStrategy::printStats(OrderBook &ob)
@@ -156,11 +144,7 @@ void MarketMakingStrategy::printStats(OrderBook &ob)
     cout << "Cash: " << cash << endl;
 
     cout << "PnL: "
-         << Metrics::getPnL(
-                cash,
-                position,
-                mid,
-                inventoryPenalty)
+         << currentPnL(ob)
          << endl;
 
     cout << "Drawdown: "

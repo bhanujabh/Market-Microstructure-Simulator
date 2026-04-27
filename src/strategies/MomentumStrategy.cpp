@@ -5,17 +5,6 @@
 
 using namespace std;
 
-static double getMidPrice(OrderBook &ob)
-{
-    if (!ob.bids.empty() && !ob.asks.empty())
-    {
-        int bestBid = ob.bids.begin()->first;
-        int bestAsk = ob.asks.begin()->first;
-        return (bestBid + bestAsk) / 2.0;
-    }
-    return 0;
-}
-
 void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
 {
     prices.push_back(t.price);
@@ -66,23 +55,39 @@ void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
     }
 
     if (prices.size() < 3)
+    {
+        pnlHistory.push_back(currentPnL(ob));
         return;
-
+    }
     int n = prices.size();
 
     // RISK FIRST
-    if (position >= maxPosition)
+    if (!risk.allowBuy(position))
     {
         cout << "Reducing long\n";
         int id = nextId++;
         myOrders.insert(id);
         execStats[id] = {0, 0, 1, t.price}; // expected price
-        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1});
+        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0});
+        pnlHistory.push_back(currentPnL(ob));
         return;
     }
-    if (position <= -maxPosition)
+    if (!risk.allowSell(position))
     {
         cout << "Reducing short\n";
+
+        int id = nextId++;
+        myOrders.insert(id);
+        execStats[id] = {0, 0, 1, t.price};
+
+        ob.addOrder({id,
+                     Side::BUY,
+                     OrderType::MARKET,
+                     0,
+                     1,
+                     0});
+
+        pnlHistory.push_back(currentPnL(ob));
         return;
     }
 
@@ -90,49 +95,35 @@ void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
     if (prices[n - 1] > prices[n - 2] && prices[n - 2] > prices[n - 3])
     {
         cout << "Momentum BUY signal\n";
-        int id = nextId++;
-        myOrders.insert(id);
-        execStats[id] = {0, 0, 1, t.price}; // expected price
-        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1});
+        if (risk.allowBuy(position))
+        {
+            int id = nextId++;
+            myOrders.insert(id);
+            execStats[id] = {0, 0, 1, t.price}; // expected price
+            ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1, 0});
+        }
     }
 
     // downward momentum
     else if (prices[n - 1] < prices[n - 2] && prices[n - 2] < prices[n - 3])
     {
         cout << "Momentum SELL signal\n";
-        int id = nextId++;
-        myOrders.insert(id);
-        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1});
+        if (risk.allowSell(position))
+        {
+            int id = nextId++;
+            myOrders.insert(id);
+            ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1});
+        }
     }
-
-    double mid = getMidPrice(ob);
-
-    double pnl = Metrics::getPnL(
-        cash,
-        position,
-        mid,
-        inventoryPenalty);
-
-    pnlHistory.push_back(pnl);
+    pnlHistory.push_back(currentPnL(ob));
 }
 
 void MomentumStrategy::onEvent(OrderBook &ob)
 {
-    if (position > maxPosition)
+    // Kill switch on every event
+    if (risk.killSwitch(currentPnL(ob)))
     {
-        int reduceQty = position - maxPosition;
-        int id = nextId++;
-        myOrders.insert(id);
-        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, reduceQty});
-        return;
-    }
-
-    if (position < -maxPosition)
-    {
-        int reduceQty = -maxPosition - position;
-        int id = nextId++;
-        myOrders.insert(id);
-        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, reduceQty});
+        cout << "Risk Kill Switch Triggered\n";
         return;
     }
 }
@@ -157,11 +148,7 @@ void MomentumStrategy::printStats(OrderBook &ob)
     cout << "Cash: " << cash << endl;
 
     cout << "PnL: "
-         << Metrics::getPnL(
-                cash,
-                position,
-                mid,
-                inventoryPenalty)
+         << currentPnL(ob)
          << endl;
 
     cout << "Drawdown: "
