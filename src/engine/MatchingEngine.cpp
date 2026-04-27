@@ -24,13 +24,6 @@ void matchOrders(OrderBook &ob)
 
         ob.trades.push_back({buyOrder->id, sellOrder->id, bestAsk->first, tradedQty, ob.tradeTimestamp++});
 
-        if (ob.strategy && !ob.isStrategyRunning)
-        {
-            ob.isStrategyRunning = true;
-            ob.strategy->onTrade(ob.trades.back(), ob);
-            ob.isStrategyRunning = false;
-        }
-
         ob.onEvent(EventType::TRADE_EXEC);
 
         cout << "Trade executed: "
@@ -70,6 +63,13 @@ void matchOrders(OrderBook &ob)
 
         if (bestAsk->second.empty())
             ob.asks.erase(bestAsk);
+
+        if (ob.strategy && !ob.isStrategyRunning)
+        {
+            ob.isStrategyRunning = true;
+            ob.strategy->onTrade(ob.trades.back(), ob);
+            ob.isStrategyRunning = false;
+        }
     }
 }
 
@@ -85,13 +85,6 @@ void executeMarketBuy(OrderBook &ob, Order *marketOrder)
         int tradedQty = min(quantity, sellOrder->quantity);
 
         ob.trades.push_back({marketOrder->id, sellOrder->id, bestAsk->first, tradedQty, ob.tradeTimestamp++});
-
-        if (ob.strategy && !ob.isStrategyRunning)
-        {
-            ob.isStrategyRunning = true;
-            ob.strategy->onTrade(ob.trades.back(), ob);
-            ob.isStrategyRunning = false;
-        }
 
         ob.onEvent(EventType::TRADE_EXEC);
 
@@ -113,6 +106,13 @@ void executeMarketBuy(OrderBook &ob, Order *marketOrder)
 
         if (bestAsk->second.empty())
             ob.asks.erase(bestAsk);
+
+        if (ob.strategy && !ob.isStrategyRunning)
+        {
+            ob.isStrategyRunning = true;
+            ob.strategy->onTrade(ob.trades.back(), ob);
+            ob.isStrategyRunning = false;
+        }
     }
 
     if (quantity > 0)
@@ -134,13 +134,6 @@ void executeMarketSell(OrderBook &ob, Order *marketOrder)
 
         ob.trades.push_back({buyOrder->id, marketOrder->id, bestBid->first, tradedQty, ob.tradeTimestamp++});
 
-        if (ob.strategy && !ob.isStrategyRunning)
-        {
-            ob.isStrategyRunning = true;
-            ob.strategy->onTrade(ob.trades.back(), ob);
-            ob.isStrategyRunning = false;
-        }
-
         ob.onEvent(EventType::TRADE_EXEC);
 
         cout << "Trade: MKT SELL " << marketOrder->id
@@ -161,6 +154,13 @@ void executeMarketSell(OrderBook &ob, Order *marketOrder)
 
         if (bestBid->second.empty())
             ob.bids.erase(bestBid);
+
+        if (ob.strategy && !ob.isStrategyRunning)
+        {
+            ob.isStrategyRunning = true;
+            ob.strategy->onTrade(ob.trades.back(), ob);
+            ob.isStrategyRunning = false;
+        }
     }
 
     if (quantity > 0)
