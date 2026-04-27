@@ -1,8 +1,20 @@
 #include <iostream>
 #include "ImbalanceStrategy.h"
 #include "../core/Types.h"
+#include "../analytics/Metrics.h"
 
 using namespace std;
+
+static double getMidPrice(OrderBook &ob)
+{
+    if (!ob.bids.empty() && !ob.asks.empty())
+    {
+        int bestBid = ob.bids.begin()->first;
+        int bestAsk = ob.asks.begin()->first;
+        return (bestBid + bestAsk) / 2.0;
+    }
+    return 0;
+}
 
 void ImbalanceStrategy::onEvent(OrderBook &ob)
 {
@@ -16,6 +28,9 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
         for (auto o : p.second)
             askQty += o->quantity;
 
+    if (bidQty + askQty == 0)
+        return;
+
     double imbalance = (double)bidQty / (bidQty + askQty);
 
     // RISK MANAGEMENT FIRST
@@ -24,7 +39,7 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
         int id = nextId++;
         myOrders.insert(id);
         execStats[id] = {0, 0, 1, 0}; // MARKET → expected price ~ mid
-        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1});
+        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0});
         return;
     }
     if (position <= -maxPosition)
@@ -32,7 +47,7 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
         int id = nextId++;
         myOrders.insert(id);
         execStats[id] = {0, 0, 1, 0}; // MARKET → expected price ~ mid
-        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1});
+        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1, 0});
         return;
     }
 
@@ -42,13 +57,13 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
     {
         myOrders.insert(id);
         execStats[id] = {0, 0, 1, 0}; // MARKET → expected price ~ mid
-        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1});
+        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1, 0});
     }
     else if (imbalance < 0.3)
     {
         myOrders.insert(id);
         execStats[id] = {0, 0, 1, 0}; // MARKET → expected price ~ mid
-        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1});
+        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0});
     }
 }
 
@@ -101,73 +116,15 @@ void ImbalanceStrategy::onTrade(const Trade &t, OrderBook &ob)
 
     cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
 
-    double pnl = getPnL(ob);
+    double mid = getMidPrice(ob);
+
+    double pnl = Metrics::getPnL(
+        cash,
+        position,
+        mid,
+        inventoryPenalty);
+
     pnlHistory.push_back(pnl);
-    if (pnl > maxPnL)
-        maxPnL = pnl;
-    maxDrawdown = max(maxDrawdown, maxPnL - pnl);
-}
-
-double ImbalanceStrategy::getPnL(OrderBook &ob)
-{
-    double mid = 0;
-
-    if (!ob.bids.empty() && !ob.asks.empty())
-    {
-        int bestBid = ob.bids.begin()->first;
-        int bestAsk = ob.asks.begin()->first;
-        mid = (bestBid + bestAsk) / 2.0;
-    }
-    return cash + position * mid - inventoryPenalty * abs(position);
-}
-
-double ImbalanceStrategy::getAvgExecutionPrice(int orderId)
-{
-    auto &s = execStats[orderId];
-    if (s.filledQty == 0)
-        return 0;
-    return s.totalValue / s.filledQty;
-}
-
-double ImbalanceStrategy::getFillRate(int orderId)
-{
-    auto &s = execStats[orderId];
-    return (double)s.filledQty / s.intendedQty;
-}
-
-double ImbalanceStrategy::getSlippage(int orderId)
-{
-    return getAvgExecutionPrice(orderId) - execStats[orderId].expectedPrice;
-}
-
-double ImbalanceStrategy::getSharpe()
-{
-    if (pnlHistory.size() < 2)
-        return 0;
-    vector<double> returns;
-    for (int i = 1; i < pnlHistory.size(); i++)
-    {
-        returns.push_back(pnlHistory[i] - pnlHistory[i - 1]);
-    }
-    double mean = 0;
-    for (double r : returns)
-        mean += r;
-    mean /= returns.size();
-    double var = 0;
-    for (double r : returns)
-        var += (r - mean) * (r - mean);
-    var /= returns.size();
-    double stddev = sqrt(var);
-    if (stddev == 0)
-        return 0;
-    return mean / stddev;
-}
-
-double ImbalanceStrategy::getWinRate()
-{
-    if (totalTrades == 0)
-        return 0;
-    return (double)wins / totalTrades;
 }
 
 void ImbalanceStrategy::printStats(OrderBook &ob)
@@ -175,15 +132,37 @@ void ImbalanceStrategy::printStats(OrderBook &ob)
     for (auto &p : execStats)
     {
         cout << "Order " << p.first
-             << " | AvgPx: " << getAvgExecutionPrice(p.first)
-             << " | FillRate: " << getFillRate(p.first)
-             << " | Slippage: " << getSlippage(p.first)
+             << " | AvgPx: "
+             << Metrics::getAvgExecutionPrice(execStats, p.first)
+             << " | FillRate: "
+             << Metrics::getFillRate(execStats, p.first)
+             << " | Slippage: "
+             << Metrics::getSlippage(execStats, p.first)
              << endl;
     }
+
+    double mid = getMidPrice(ob);
+
     cout << "Final Position: " << position << endl;
     cout << "Cash: " << cash << endl;
-    cout << "PnL: " << getPnL(ob) << endl;
-    cout << "Drawdown: " << maxDrawdown << endl;
-    cout << "Sharpe: " << getSharpe() << endl;
-    cout << "Win Rate: " << getWinRate() << endl;
+
+    cout << "PnL: "
+         << Metrics::getPnL(
+                cash,
+                position,
+                mid,
+                inventoryPenalty)
+         << endl;
+
+    cout << "Drawdown: "
+         << Metrics::getMaxDrawdown(pnlHistory)
+         << endl;
+
+    cout << "Sharpe: "
+         << Metrics::getSharpe(pnlHistory)
+         << endl;
+
+    cout << "Win Rate: "
+         << Metrics::getWinRate(wins, totalTrades)
+         << endl;
 }

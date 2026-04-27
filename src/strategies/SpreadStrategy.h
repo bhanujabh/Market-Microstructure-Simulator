@@ -32,11 +32,4 @@ public:
     void onEvent(OrderBook &ob) override;
     void onTrade(const Trade &t, OrderBook &ob) override;
     void printStats(OrderBook &ob) override;
-
-    double getPnL(OrderBook &ob);
-    double getAvgExecutionPrice(int orderId);
-    double getFillRate(int orderId);
-    double getSlippage(int orderId);
-    double getSharpe();
-    double getWinRate();
 };

@@ -1,4 +1,5 @@
 #pragma once
+
 struct Trade
 {
     int buyId{};
@@ -6,5 +7,4 @@ struct Trade
     int price{};
     int quantity{};
     long long timestamp{};
-    // brackets represent default initialisation
 };

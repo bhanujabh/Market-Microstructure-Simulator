@@ -1,5 +1,6 @@
 #pragma once
 #include "Types.h"
+
 struct Order
 {
     int id{};
@@ -8,4 +9,5 @@ struct Order
     int price{};
     int quantity{};
     long long timestamp{};
+    // default initialization {} -> prevents garbage values
 };

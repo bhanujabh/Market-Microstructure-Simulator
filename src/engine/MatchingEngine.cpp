@@ -2,6 +2,8 @@
 #include <algorithm>
 #include "MatchingEngine.h"
 #include "OrderBook.h"
+#include "../core/Types.h"
+#include "../strategies/Strategy.h"
 
 using namespace std;
 
@@ -29,7 +31,7 @@ void matchOrders(OrderBook &ob)
             ob.isStrategyRunning = false;
         }
 
-        ob.onEvent(TRADE_EXEC);
+        ob.onEvent(EventType::TRADE_EXEC);
 
         cout << "Trade executed: "
              << tradedQty << " @ " << bestAsk->first << endl;
@@ -91,7 +93,7 @@ void executeMarketBuy(OrderBook &ob, Order *marketOrder)
             ob.isStrategyRunning = false;
         }
 
-        ob.onEvent(TRADE_EXEC);
+        ob.onEvent(EventType::TRADE_EXEC);
 
         cout << "Trade: MKT BUY " << marketOrder->id
              << " vs SELL " << sellOrder->id
@@ -139,7 +141,7 @@ void executeMarketSell(OrderBook &ob, Order *marketOrder)
             ob.isStrategyRunning = false;
         }
 
-        ob.onEvent(TRADE_EXEC);
+        ob.onEvent(EventType::TRADE_EXEC);
 
         cout << "Trade: MKT SELL " << marketOrder->id
              << " vs BUY " << buyOrder->id
