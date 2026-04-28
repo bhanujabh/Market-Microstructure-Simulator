@@ -2,41 +2,44 @@
 #include "OrderBook.h"
 #include "MatchingEngine.h"
 #include "../strategies/Strategy.h"
+#include <memory>
 
 using namespace std;
 
 void OrderBook::addOrder(const Order &order)
 {
-    Order *newOrder = new Order(order); // allocate
+    auto newOrder = std::make_unique<Order>(order); // allocate
     newOrder->timestamp = orderTimestamp++;
+    Order *rawPtr = newOrder.get();
 
     if (order.type == OrderType::MARKET)
     {
         cout << "Market Order Received: ID=" << newOrder->id << " Time=" << newOrder->timestamp << endl;
         if (order.side == Side::BUY)
-            executeMarketBuy(*this, newOrder);
+            executeMarketBuy(*this, rawPtr);
         else
-            executeMarketSell(*this, newOrder);
+            executeMarketSell(*this, rawPtr);
 
-        delete newOrder;
         onEvent(EventType::ORDER_ADD);
         return;
     }
 
     if (order.side == Side::BUY)
     {
-        bids[order.price].push_back(newOrder);
-        auto it = prev(bids[order.price].end());
-        orderMap.emplace(order.id, OrderNode(newOrder, it));
+        auto &q = bids[order.price];
+        q.push_back(std::move(newOrder));
+        auto it = prev(q.end());
+        orderMap.emplace(order.id, OrderNode(rawPtr, it));
     }
     else
     {
-        asks[order.price].push_back(newOrder);
-        auto it = prev(asks[order.price].end());
-        orderMap.emplace(order.id, OrderNode(newOrder, it));
+        auto &q = asks[order.price];
+        q.push_back(std::move(newOrder));
+        auto it = prev(q.end());
+        orderMap.emplace(order.id, OrderNode(rawPtr, it));
     }
 
-    cout << "Order Added: ID=" << order.id << " Time=" << newOrder->timestamp << endl;
+    cout << "Order Added: ID=" << order.id << " Time=" << rawPtr->timestamp << endl;
 
     matchOrders(*this);
     onEvent(EventType::ORDER_ADD);
@@ -53,23 +56,31 @@ void OrderBook::cancelOrder(int orderId)
     OrderNode &node = orderMap.at(orderId);
     Order *order = node.order;
 
-    if (order->side == Side::BUY)
-    {
-        auto &orderList = this->bids[order->price];
-        orderList.erase(node.it);
+    Side side = order->side;  // save BEFORE erase
+    int price = order->price; // save BEFORE erase
 
-        if (orderList.empty())
-            bids.erase(order->price);
+    if (side == Side::BUY)
+    {
+        auto it = bids.find(price);
+        if (it != bids.end())
+        {
+            it->second.erase(node.it); // frees order
+
+            if (it->second.empty())
+                bids.erase(it); // erase by iterator
+        }
     }
     else
     {
-        auto &orderList = this->asks[order->price];
-        orderList.erase(node.it);
+        auto it = asks.find(price);
+        if (it != asks.end())
+        {
+            it->second.erase(node.it);
 
-        if (orderList.empty())
-            asks.erase(order->price);
+            if (it->second.empty())
+                asks.erase(it);
+        }
     }
-    delete order;
     orderMap.erase(orderId);
 
     cout << "Order " << orderId << " cancelled\n";
@@ -118,17 +129,24 @@ void OrderBook::modifyOrder(int orderId, int newPrice, int newQty)
                           ? bids[order->price]
                           : asks[order->price];
 
+        // move ownership out of current node
+        auto movedOrder = std::move(*node.it);
+
         // remove from current position
+        // erase empty node
         level.erase(node.it);
 
         // update timestamp
-        order->timestamp = orderTimestamp++;
+        movedOrder->timestamp = orderTimestamp++;
 
         // move to back of queue
-        level.push_back(order);
+        level.push_back(std::move(movedOrder));
 
         // save new iterator
         node.it = prev(level.end());
+
+        // refresh raw pointer
+        node.order = node.it->get();
     }
     order->quantity = newQty;
     cout << "Order " << orderId << " modified (qty change)\n";
@@ -145,7 +163,7 @@ void OrderBook::takeSnapshot(long long timestamp)
     for (auto &priceLevel : bids)
     {
         int totalQty = 0;
-        for (auto order : priceLevel.second)
+        for (auto &order : priceLevel.second)
         {
             totalQty += order->quantity;
         }
@@ -155,7 +173,7 @@ void OrderBook::takeSnapshot(long long timestamp)
     for (auto &priceLevel : asks)
     {
         int totalQty = 0;
-        for (auto order : priceLevel.second)
+        for (auto &order : priceLevel.second)
         {
             totalQty += order->quantity;
         }
@@ -209,10 +227,4 @@ void OrderBook::replayTrades()
              << " | BuyID: " << t.buyId
              << " | SellID: " << t.sellId << endl;
     }
-}
-
-OrderBook::~OrderBook()
-{
-    for (auto &[id, node] : orderMap)
-        delete node.order;
 }

@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include <map>
 #include <vector>
+#include <memory>
+
 #include "../core/Order.h"
 #include "../core/Trade.h"
 #include "../core/Snapshot.h"
@@ -13,9 +15,10 @@ class Strategy; // forward declaration,Avoids circular include
 struct OrderNode
 {
     Order *order;
-    std::list<Order *>::iterator it;
+    std::list<std::unique_ptr<Order>>::iterator it;
 
-    OrderNode(Order *o, std::list<Order *>::iterator iter)
+    OrderNode(Order *o,
+              std::list<std::unique_ptr<Order>>::iterator iter)
         : order(o), it(iter) {}
 };
 
@@ -24,8 +27,13 @@ class OrderBook
 public:
     std::unordered_map<int, OrderNode> orderMap;
 
-    std::map<int, std::list<Order *>, std::greater<int>> bids;
-    std::map<int, std::list<Order *>> asks;
+    std::map<int,
+             std::list<std::unique_ptr<Order>>,
+             std::greater<int>>
+        bids;
+    std::map<int,
+             std::list<std::unique_ptr<Order>>>
+        asks;
 
     std::vector<Trade> trades;
 
@@ -47,5 +55,5 @@ public:
     void onEvent(EventType event);
     void replayTrades();
 
-    ~OrderBook();
+    ~OrderBook() = default;
 };

@@ -17,14 +17,12 @@ void matchOrders(OrderBook &ob)
         if (bestBid->first < bestAsk->first)
             break;
 
-        Order *buyOrder = bestBid->second.front();
-        Order *sellOrder = bestAsk->second.front();
+        Order *buyOrder = bestBid->second.front().get();
+        Order *sellOrder = bestAsk->second.front().get();
 
         int tradedQty = min(buyOrder->quantity, sellOrder->quantity);
 
         ob.trades.push_back({buyOrder->id, sellOrder->id, bestAsk->first, tradedQty, ob.tradeTimestamp++});
-
-        ob.onEvent(EventType::TRADE_EXEC);
 
         cout << "Trade executed: "
              << tradedQty << " @ " << bestAsk->first << endl;
@@ -46,7 +44,6 @@ void matchOrders(OrderBook &ob)
         {
             int id = buyOrder->id;       // save BEFORE deletion
             bestBid->second.pop_front(); // deletes the object
-            delete buyOrder;             // free memory
             ob.orderMap.erase(id);       // remove tracking
         }
 
@@ -54,7 +51,6 @@ void matchOrders(OrderBook &ob)
         {
             int id = sellOrder->id;
             bestAsk->second.pop_front();
-            delete sellOrder;
             ob.orderMap.erase(id);
         }
 
@@ -63,6 +59,8 @@ void matchOrders(OrderBook &ob)
 
         if (bestAsk->second.empty())
             ob.asks.erase(bestAsk);
+
+        ob.onEvent(EventType::TRADE_EXEC);
 
         if (ob.strategy && !ob.isStrategyRunning)
         {
@@ -80,13 +78,11 @@ void executeMarketBuy(OrderBook &ob, Order *marketOrder)
     {
         auto bestAsk = ob.asks.begin();
 
-        Order *sellOrder = bestAsk->second.front();
+        Order *sellOrder = bestAsk->second.front().get();
 
         int tradedQty = min(quantity, sellOrder->quantity);
 
         ob.trades.push_back({marketOrder->id, sellOrder->id, bestAsk->first, tradedQty, ob.tradeTimestamp++});
-
-        ob.onEvent(EventType::TRADE_EXEC);
 
         cout << "Trade: MKT BUY " << marketOrder->id
              << " vs SELL " << sellOrder->id
@@ -100,12 +96,14 @@ void executeMarketBuy(OrderBook &ob, Order *marketOrder)
         {
             int id = sellOrder->id;
             bestAsk->second.pop_front();
-            delete sellOrder;
+
             ob.orderMap.erase(id);
         }
 
         if (bestAsk->second.empty())
             ob.asks.erase(bestAsk);
+
+        ob.onEvent(EventType::TRADE_EXEC);
 
         if (ob.strategy && !ob.isStrategyRunning)
         {
@@ -128,13 +126,11 @@ void executeMarketSell(OrderBook &ob, Order *marketOrder)
     {
         auto bestBid = ob.bids.begin();
 
-        Order *buyOrder = bestBid->second.front();
+        Order *buyOrder = bestBid->second.front().get();
 
         int tradedQty = min(quantity, buyOrder->quantity);
 
         ob.trades.push_back({buyOrder->id, marketOrder->id, bestBid->first, tradedQty, ob.tradeTimestamp++});
-
-        ob.onEvent(EventType::TRADE_EXEC);
 
         cout << "Trade: MKT SELL " << marketOrder->id
              << " vs BUY " << buyOrder->id
@@ -148,12 +144,13 @@ void executeMarketSell(OrderBook &ob, Order *marketOrder)
         {
             int id = buyOrder->id;
             bestBid->second.pop_front();
-            delete buyOrder;
             ob.orderMap.erase(id);
         }
 
         if (bestBid->second.empty())
             ob.bids.erase(bestBid);
+
+        ob.onEvent(EventType::TRADE_EXEC);
 
         if (ob.strategy && !ob.isStrategyRunning)
         {

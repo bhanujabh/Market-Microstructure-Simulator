@@ -1,0 +1,362 @@
+{
+  "totalTrades": 51,
+  "trades": [
+    {
+      "buyId": 1003,
+      "sellId": 1005,
+      "price": 97,
+      "quantity": 3,
+      "timestamp": 0
+    },
+    {
+      "buyId": 1002,
+      "sellId": 1006,
+      "price": 96,
+      "quantity": 1,
+      "timestamp": 1
+    },
+    {
+      "buyId": 1004,
+      "sellId": 1006,
+      "price": 96,
+      "quantity": 1,
+      "timestamp": 2
+    },
+    {
+      "buyId": 1006,
+      "sellId": 1006,
+      "price": 96,
+      "quantity": 1,
+      "timestamp": 3
+    },
+    {
+      "buyId": 1007,
+      "sellId": 1006,
+      "price": 96,
+      "quantity": 1,
+      "timestamp": 4
+    },
+    {
+      "buyId": 1007,
+      "sellId": 1010,
+      "price": 94,
+      "quantity": 1,
+      "timestamp": 5
+    },
+    {
+      "buyId": 1012,
+      "sellId": 1003,
+      "price": 99,
+      "quantity": 1,
+      "timestamp": 6
+    },
+    {
+      "buyId": 1012,
+      "sellId": 1023,
+      "price": 99,
+      "quantity": 1,
+      "timestamp": 7
+    },
+    {
+      "buyId": 1007,
+      "sellId": 1016,
+      "price": 91,
+      "quantity": 4,
+      "timestamp": 8
+    },
+    {
+      "buyId": 1009,
+      "sellId": 1016,
+      "price": 91,
+      "quantity": 2,
+      "timestamp": 9
+    },
+    {
+      "buyId": 1022,
+      "sellId": 1016,
+      "price": 91,
+      "quantity": 1,
+      "timestamp": 10
+    },
+    {
+      "buyId": 1008,
+      "sellId": 1027,
+      "price": 91,
+      "quantity": 2,
+      "timestamp": 11
+    },
+    {
+      "buyId": 1011,
+      "sellId": 1027,
+      "price": 91,
+      "quantity": 2,
+      "timestamp": 12
+    },
+    {
+      "buyId": 1014,
+      "sellId": 1027,
+      "price": 91,
+      "quantity": 2,
+      "timestamp": 13
+    },
+    {
+      "buyId": 1014,
+      "sellId": 1028,
+      "price": 90,
+      "quantity": 4,
+      "timestamp": 14
+    },
+    {
+      "buyId": 1015,
+      "sellId": 1024,
+      "price": 93,
+      "quantity": 1,
+      "timestamp": 15
+    },
+    {
+      "buyId": 1018,
+      "sellId": 1028,
+      "price": 90,
+      "quantity": 5,
+      "timestamp": 16
+    },
+    {
+      "buyId": 1032,
+      "sellId": 1033,
+      "price": 96,
+      "quantity": 4,
+      "timestamp": 17
+    },
+    {
+      "buyId": 1032,
+      "sellId": 1035,
+      "price": 95,
+      "quantity": 3,
+      "timestamp": 18
+    },
+    {
+      "buyId": 1031,
+      "sellId": 1025,
+      "price": 96,
+      "quantity": 1,
+      "timestamp": 19
+    },
+    {
+      "buyId": 1031,
+      "sellId": 1035,
+      "price": 95,
+      "quantity": 2,
+      "timestamp": 20
+    },
+    {
+      "buyId": 1030,
+      "sellId": 1036,
+      "price": 94,
+      "quantity": 4,
+      "timestamp": 21
+    },
+    {
+      "buyId": 1034,
+      "sellId": 1036,
+      "price": 94,
+      "quantity": 3,
+      "timestamp": 22
+    },
+    {
+      "buyId": 1034,
+      "sellId": 1037,
+      "price": 94,
+      "quantity": 3,
+      "timestamp": 23
+    },
+    {
+      "buyId": 1034,
+      "sellId": 1026,
+      "price": 94,
+      "quantity": 1,
+      "timestamp": 24
+    },
+    {
+      "buyId": 1034,
+      "sellId": 1027,
+      "price": 94,
+      "quantity": 1,
+      "timestamp": 25
+    },
+    {
+      "buyId": 1039,
+      "sellId": 1028,
+      "price": 94,
+      "quantity": 1,
+      "timestamp": 26
+    },
+    {
+      "buyId": 1041,
+      "sellId": 1029,
+      "price": 94,
+      "quantity": 1,
+      "timestamp": 27
+    },
+    {
+      "buyId": 1041,
+      "sellId": 1042,
+      "price": 94,
+      "quantity": 3,
+      "timestamp": 28
+    },
+    {
+      "buyId": 1018,
+      "sellId": 1030,
+      "price": 93,
+      "quantity": 1,
+      "timestamp": 29
+    },
+    {
+      "buyId": 1018,
+      "sellId": 1031,
+      "price": 93,
+      "quantity": 1,
+      "timestamp": 30
+    },
+    {
+      "buyId": 1043,
+      "sellId": 1042,
+      "price": 94,
+      "quantity": 6,
+      "timestamp": 31
+    },
+    {
+      "buyId": 1040,
+      "sellId": 1032,
+      "price": 93,
+      "quantity": 1,
+      "timestamp": 32
+    },
+    {
+      "buyId": 1040,
+      "sellId": 1033,
+      "price": 93,
+      "quantity": 1,
+      "timestamp": 33
+    },
+    {
+      "buyId": 1040,
+      "sellId": 1044,
+      "price": 93,
+      "quantity": 1,
+      "timestamp": 34
+    },
+    {
+      "buyId": 1017,
+      "sellId": 1034,
+      "price": 92,
+      "quantity": 1,
+      "timestamp": 35
+    },
+    {
+      "buyId": 1017,
+      "sellId": 1035,
+      "price": 92,
+      "quantity": 1,
+      "timestamp": 36
+    },
+    {
+      "buyId": 1045,
+      "sellId": 1036,
+      "price": 93,
+      "quantity": 1,
+      "timestamp": 37
+    },
+    {
+      "buyId": 1046,
+      "sellId": 1037,
+      "price": 93,
+      "quantity": 1,
+      "timestamp": 38
+    },
+    {
+      "buyId": 1047,
+      "sellId": 1038,
+      "price": 95,
+      "quantity": 9,
+      "timestamp": 39
+    },
+    {
+      "buyId": 1017,
+      "sellId": 1038,
+      "price": 92,
+      "quantity": 1,
+      "timestamp": 40
+    },
+    {
+      "buyId": 1017,
+      "sellId": 1039,
+      "price": 92,
+      "quantity": 1,
+      "timestamp": 41
+    },
+    {
+      "buyId": 1017,
+      "sellId": 1040,
+      "price": 92,
+      "quantity": 1,
+      "timestamp": 42
+    },
+    {
+      "buyId": 1025,
+      "sellId": 1041,
+      "price": 92,
+      "quantity": 1,
+      "timestamp": 43
+    },
+    {
+      "buyId": 1050,
+      "sellId": 1049,
+      "price": 94,
+      "quantity": 7,
+      "timestamp": 44
+    },
+    {
+      "buyId": 1026,
+      "sellId": 1042,
+      "price": 92,
+      "quantity": 1,
+      "timestamp": 45
+    },
+    {
+      "buyId": 1050,
+      "sellId": 1038,
+      "price": 95,
+      "quantity": 1,
+      "timestamp": 46
+    },
+    {
+      "buyId": 1026,
+      "sellId": 1043,
+      "price": 92,
+      "quantity": 1,
+      "timestamp": 47
+    },
+    {
+      "buyId": 1050,
+      "sellId": 1048,
+      "price": 95,
+      "quantity": 1,
+      "timestamp": 48
+    },
+    {
+      "buyId": 1026,
+      "sellId": 1044,
+      "price": 92,
+      "quantity": 1,
+      "timestamp": 49
+    },
+    {
+      "buyId": 1026,
+      "sellId": 1045,
+      "price": 92,
+      "quantity": 1,
+      "timestamp": 50
+    }
+  ]
+}

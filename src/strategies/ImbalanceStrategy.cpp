@@ -10,11 +10,11 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
     int bidQty = 0, askQty = 0;
 
     for (auto &p : ob.bids)
-        for (auto o : p.second)
+        for (const auto &o : p.second)
             bidQty += o->quantity;
 
     for (auto &p : ob.asks)
-        for (auto o : p.second)
+        for (const auto &o : p.second)
             askQty += o->quantity;
 
     if (bidQty + askQty == 0)
