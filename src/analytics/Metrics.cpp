@@ -1,3 +1,4 @@
+#include <iostream>
 #include <vector>
 #include <cmath>
 #include <unordered_map>
@@ -48,8 +49,13 @@ double Metrics::getFillRate(const std::unordered_map<int, ExecutionStats> &execS
 
     if (s.intendedQty == 0)
         return 0;
+    if (s.filledQty > s.intendedQty)
+    {
+        cerr << "ERROR: Overfill detected for order " << orderId << endl;
+    }
 
-    return (double)s.filledQty / s.intendedQty;
+    double rate = (double)s.filledQty / s.intendedQty;
+    return min(rate, 1.0);
 }
 
 double Metrics::getSlippage(const std::unordered_map<int, ExecutionStats> &execStats,
