@@ -68,7 +68,7 @@ void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
         int id = ob.generateOrderId();
         myOrders.insert(id);
         execStats[id] = {0, 0, 1, t.price}; // expected price
-        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0});
+        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0, myId});
         pnlHistory.push_back(currentPnL(ob));
         return;
     }
@@ -85,7 +85,7 @@ void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
                      OrderType::MARKET,
                      0,
                      1,
-                     0});
+                     0, myId});
 
         pnlHistory.push_back(currentPnL(ob));
         return;
@@ -102,7 +102,7 @@ void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
             int id = ob.generateOrderId();
             myOrders.insert(id);
             execStats[id] = {0, 0, 1, price}; // expected price
-            ob.addOrder({id, Side::BUY, OrderType::LIMIT, price, 1, 0});
+            ob.addOrder({id, Side::BUY, OrderType::LIMIT, price, 1, 0, myId});
         }
     }
 
@@ -117,7 +117,7 @@ void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
             int id = ob.generateOrderId();
             myOrders.insert(id);
             execStats[id] = {0, 0, 1, price}; // expected price
-            ob.addOrder({id, Side::SELL, OrderType::LIMIT, price, 1, 0});
+            ob.addOrder({id, Side::SELL, OrderType::LIMIT, price, 1, 0, myId});
         }
     }
     pnlHistory.push_back(currentPnL(ob));

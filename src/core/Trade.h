@@ -6,5 +6,7 @@ struct Trade
     double price{};
     int quantity{};
     long long timestamp{};
+    int buyOwnerId;
+    int sellOwnerId;
     // brackets represent default initialisation
 };

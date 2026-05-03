@@ -8,6 +8,7 @@ public:
     int sellOrderId = -1;
 
     int spread = 2;
+    int myId = 3;
 
     void onEvent(OrderBook &ob) override;
     void onTrade(const Trade &t, OrderBook &ob) override;

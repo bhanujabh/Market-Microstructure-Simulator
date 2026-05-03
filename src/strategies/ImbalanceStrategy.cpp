@@ -50,7 +50,7 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
                      OrderType::MARKET,
                      0,
                      1,
-                     0});
+                     0, myId});
 
         return;
     }
@@ -69,12 +69,13 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
                      OrderType::MARKET,
                      0,
                      1,
-                     0});
+                     0, myId});
 
         return;
     }
 
     double spread = askQty - bidQty;
+    // normalising the spread
     double mid = (askQty + bidQty) / 2.0;
     double spreadPct = spread / mid;
     double upperThreshold = 0.5 + 0.2 * spreadPct;
@@ -98,7 +99,7 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
                          OrderType::LIMIT,
                          price,
                          1,
-                         0});
+                         0, myId});
         }
     }
     else if (imbalance < lowerThreshold)
@@ -117,7 +118,7 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
                          OrderType::LIMIT,
                          price,
                          1,
-                         0});
+                         0, myId});
         }
     }
 }

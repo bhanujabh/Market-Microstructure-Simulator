@@ -35,7 +35,7 @@ void MarketMakingStrategy::onEvent(OrderBook &ob)
         execStats[id] = {0, 0, 1, bestBid};
 
         // ===== CHANGED: added 6th timestamp field =====
-        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0});
+        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0, myId});
         return;
     }
 
@@ -48,7 +48,7 @@ void MarketMakingStrategy::onEvent(OrderBook &ob)
         execStats[id] = {0, 0, 1, bestAsk};
 
         // ===== CHANGED: added 6th timestamp field =====
-        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1, 0});
+        ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1, 0, myId});
         return;
     }
 
@@ -68,9 +68,9 @@ void MarketMakingStrategy::onEvent(OrderBook &ob)
     cout << "Market Making...\n";
 
     execStats[buyOrderId] = {0, 0, 1, buyPrice};
-    ob.addOrder({buyOrderId, Side::BUY, OrderType::LIMIT, buyPrice, 1, 0});
+    ob.addOrder({buyOrderId, Side::BUY, OrderType::LIMIT, buyPrice, 1, 0, myId});
     execStats[sellOrderId] = {0, 0, 1, sellPrice};
-    ob.addOrder({sellOrderId, Side::SELL, OrderType::LIMIT, sellPrice, 1, 0});
+    ob.addOrder({sellOrderId, Side::SELL, OrderType::LIMIT, sellPrice, 1, 0, myId});
 }
 
 void MarketMakingStrategy::onTrade(const Trade &t, OrderBook &ob)

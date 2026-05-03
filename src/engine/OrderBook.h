@@ -27,11 +27,11 @@ class OrderBook
 public:
     std::unordered_map<int, OrderNode> orderMap;
 
-    std::map<int,
+    std::map<double,
              std::list<std::unique_ptr<Order>>,
-             std::greater<int>>
+             std::greater<double>>
         bids;
-    std::map<int,
+    std::map<double,
              std::list<std::unique_ptr<Order>>>
         asks;
 

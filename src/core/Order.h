@@ -8,4 +8,5 @@ struct Order
     double price{};
     int quantity{};
     long long timestamp{};
+    int ownerId;
 };
