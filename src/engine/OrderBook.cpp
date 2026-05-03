@@ -53,11 +53,23 @@ void OrderBook::addOrder(const Order &order)
 
 void OrderBook::cancelOrder(int orderId)
 {
-    if (this->orderMap.find(orderId) == this->orderMap.end())
+    // in the below code strategy can trigger cancels while matching is in progress
+    // print "Order not found" (noisy)
+    // fetch the node twice (find + at)
+    // risk using a stale iterator if the order was already removed elsewhere
+    // call onEvent unconditionally
+    // if (this->orderMap.find(orderId) == this->orderMap.end())
+    // {
+    //     cout << "Order not found\n";
+    //     return;
+    // }
+
+    auto itMap = orderMap.find(orderId);
+    if (itMap == orderMap.end())
     {
-        cout << "Order not found\n";
-        return;
+        return; // silently ignore duplicate/stale cancels
     }
+    OrderNode &node = itMap->second;
 
     OrderNode &node = orderMap.at(orderId);
     Order *order = node.order;
@@ -87,11 +99,14 @@ void OrderBook::cancelOrder(int orderId)
                 asks.erase(it);
         }
     }
-    orderMap.erase(orderId);
+    orderMap.erase(itMap);
 
     cout << "Order " << orderId << " cancelled\n";
 
-    onEvent(EventType::ORDER_CANCEL);
+    if (!isStrategyRunning)
+    {
+        onEvent(EventType::ORDER_CANCEL);
+    }
 }
 
 void OrderBook::modifyOrder(int orderId, int newPrice, int newQty)
