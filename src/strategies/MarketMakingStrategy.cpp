@@ -28,8 +28,9 @@ void MarketMakingStrategy::onEvent(OrderBook &ob)
     // ===== CHANGED: use RiskManager instead of maxPosition =====
     if (!risk.allowBuy(position))
     {
-        int id = nextId++;
-        myOrders.insert(id);
+        int id = ob.generateOrderId();
+        // no need to add to my orders bcz market orders are implemented immediately
+        // myOrders.insert(id);
 
         execStats[id] = {0, 0, 1, bestBid};
 
@@ -41,8 +42,8 @@ void MarketMakingStrategy::onEvent(OrderBook &ob)
     // ===== CHANGED: use RiskManager instead of maxPosition =====
     if (!risk.allowSell(position))
     {
-        int id = nextId++;
-        myOrders.insert(id); // ===== CHANGED: inserted missing myOrders =====
+        int id = ob.generateOrderId();
+        // myOrders.insert(id); // ===== CHANGED: inserted missing myOrders =====
 
         execStats[id] = {0, 0, 1, bestAsk};
 
@@ -58,8 +59,8 @@ void MarketMakingStrategy::onEvent(OrderBook &ob)
         ob.cancelOrder(sellOrderId);
 
     // place new ones
-    buyOrderId = nextId++;
-    sellOrderId = nextId++;
+    buyOrderId = ob.generateOrderId();
+    sellOrderId = ob.generateOrderId();
 
     myOrders.insert(buyOrderId);
     myOrders.insert(sellOrderId);

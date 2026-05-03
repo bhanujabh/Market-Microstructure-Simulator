@@ -32,8 +32,8 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
     // ===== CHANGED: use RiskManager instead of maxPosition =====
     if (!risk.allowBuy(position))
     {
-        int id = nextId++;
-        myOrders.insert(id);
+        int id = ob.generateOrderId();
+        // myOrders.insert(id);
 
         execStats[id] = {0, 0, 1, 0};
 
@@ -50,8 +50,8 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
     // ===== CHANGED: use RiskManager instead of maxPosition =====
     if (!risk.allowSell(position))
     {
-        int id = nextId++;
-        myOrders.insert(id);
+        int id = ob.generateOrderId();
+        // myOrders.insert(id);
 
         execStats[id] = {0, 0, 1, 0};
 
@@ -66,7 +66,7 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
     }
 
     // STRATEGY
-    int id = nextId++;
+    int id = ob.generateOrderId();
     if (imbalance > 0.7)
     {
         // MARKET → expected price ~ mid

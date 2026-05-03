@@ -12,6 +12,12 @@ void OrderBook::addOrder(const Order &order)
     newOrder->timestamp = orderTimestamp++;
     Order *rawPtr = newOrder.get();
 
+    if (orderMap.find(order.id) != orderMap.end())
+    {
+        cout << "ERROR: Duplicate Order ID " << order.id << endl;
+        return;
+    }
+
     if (order.type == OrderType::MARKET)
     {
         cout << "Market Order Received: ID=" << newOrder->id << " Time=" << newOrder->timestamp << endl;

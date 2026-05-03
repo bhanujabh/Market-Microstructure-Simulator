@@ -55,5 +55,12 @@ public:
     void onEvent(EventType event);
     void replayTrades();
 
+    int nextOrderId = 1000;
+
+    int generateOrderId()
+    {
+        return nextOrderId++;
+    }
+
     ~OrderBook() = default;
 };

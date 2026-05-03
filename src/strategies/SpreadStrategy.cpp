@@ -26,8 +26,7 @@ void SpreadStrategy::onEvent(OrderBook &ob)
     if (!risk.allowBuy(position))
     {
         cout << "Reducing long position\n";
-        int id = nextId++;
-        myOrders.insert(id);
+        int id = ob.generateOrderId();
         execStats[id] = {0, 0, 1, bestBid}; // or mid
         ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0});
         return; // stop further trading
@@ -37,8 +36,7 @@ void SpreadStrategy::onEvent(OrderBook &ob)
     {
         cout << "Reducing short position\n";
 
-        int id = nextId++;
-        myOrders.insert(id);
+        int id = ob.generateOrderId();
         execStats[id] = {0, 0, 1, bestAsk};
         ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1, 0});
         return;
@@ -61,7 +59,7 @@ void SpreadStrategy::onEvent(OrderBook &ob)
     // place only if allowed
     if (allowBuy)
     {
-        buyOrderId = nextId++;
+        buyOrderId = ob.generateOrderId();
         myOrders.insert(buyOrderId);
         execStats[buyOrderId] = {0, 0, 1, bestBid}; // expected price
         ob.addOrder({buyOrderId, Side::BUY, OrderType::LIMIT, bestBid, 1, 0});
@@ -69,7 +67,7 @@ void SpreadStrategy::onEvent(OrderBook &ob)
 
     if (allowSell)
     {
-        sellOrderId = nextId++;
+        sellOrderId = ob.generateOrderId();
         myOrders.insert(sellOrderId);
         execStats[sellOrderId] = {0, 0, 1, bestAsk}; // expected price
         ob.addOrder({sellOrderId, Side::SELL, OrderType::LIMIT, bestAsk, 1, 0});

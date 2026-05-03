@@ -65,7 +65,7 @@ void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
     if (!risk.allowBuy(position))
     {
         cout << "Reducing long\n";
-        int id = nextId++;
+        int id = ob.generateOrderId();
         myOrders.insert(id);
         execStats[id] = {0, 0, 1, t.price}; // expected price
         ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1, 0});
@@ -76,7 +76,7 @@ void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
     {
         cout << "Reducing short\n";
 
-        int id = nextId++;
+        int id = ob.generateOrderId();
         myOrders.insert(id);
         execStats[id] = {0, 0, 1, t.price};
 
@@ -97,10 +97,12 @@ void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
         cout << "Momentum BUY signal\n";
         if (risk.allowBuy(position))
         {
-            int id = nextId++;
+            double mid = getMidPrice(ob);
+            double price = mid - 1; // place slightly below market
+            int id = ob.generateOrderId();
             myOrders.insert(id);
-            execStats[id] = {0, 0, 1, t.price}; // expected price
-            ob.addOrder({id, Side::BUY, OrderType::MARKET, 0, 1, 0});
+            execStats[id] = {0, 0, 1, price}; // expected price
+            ob.addOrder({id, Side::BUY, OrderType::LIMIT, price, 1, 0});
         }
     }
 
@@ -110,9 +112,12 @@ void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
         cout << "Momentum SELL signal\n";
         if (risk.allowSell(position))
         {
-            int id = nextId++;
+            double mid = getMidPrice(ob);
+            double price = mid + 1; // place slightly above market
+            int id = ob.generateOrderId();
             myOrders.insert(id);
-            ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, 1});
+            execStats[id] = {0, 0, 1, price}; // expected price
+            ob.addOrder({id, Side::SELL, OrderType::LIMIT, price, 1, 0});
         }
     }
     pnlHistory.push_back(currentPnL(ob));

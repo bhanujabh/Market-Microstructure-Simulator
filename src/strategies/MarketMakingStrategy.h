@@ -7,7 +7,6 @@ public:
     int buyOrderId = -1;
     int sellOrderId = -1;
 
-    int nextId = 1000;
     int spread = 2;
 
     void onEvent(OrderBook &ob) override;
