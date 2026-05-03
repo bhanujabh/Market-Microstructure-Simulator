@@ -54,9 +54,19 @@ void MarketMakingStrategy::onEvent(OrderBook &ob)
 
     // cancel old orders
     if (buyOrderId != -1)
-        ob.cancelOrder(buyOrderId);
+    {
+        if (ob.orderMap.find(buyOrderId) != ob.orderMap.end())
+        {
+            ob.cancelOrder(buyOrderId);
+        }
+    }
     if (sellOrderId != -1)
-        ob.cancelOrder(sellOrderId);
+    {
+        if (ob.orderMap.find(sellOrderId) != ob.orderMap.end())
+        {
+            ob.cancelOrder(sellOrderId);
+        }
+    }
 
     // place new ones
     buyOrderId = ob.generateOrderId();
@@ -109,12 +119,12 @@ void MarketMakingStrategy::onTrade(const Trade &t, OrderBook &ob)
         }
     }
 
-    if (myOrders.count(t.buyId))
+    if (t.buyOwnerId == myId)
     {
         position += t.quantity;
         cash -= t.price * t.quantity;
     }
-    if (myOrders.count(t.sellId))
+    else if (t.sellOwnerId == myId)
     {
         position -= t.quantity;
         cash += t.price * t.quantity;

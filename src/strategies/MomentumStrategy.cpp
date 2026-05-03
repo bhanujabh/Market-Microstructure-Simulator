@@ -43,15 +43,15 @@ void MomentumStrategy::onTrade(const Trade &t, OrderBook &ob)
         }
     }
 
-    if (myOrders.count(t.buyId))
+    if (t.buyOwnerId == myId)
     {
         position += t.quantity;
-        cash -= t.price * t.quantity; // you paid
+        cash -= t.price * t.quantity;
     }
-    if (myOrders.count(t.sellId))
+    else if (t.sellOwnerId == myId)
     {
         position -= t.quantity;
-        cash += t.price * t.quantity; // you earned
+        cash += t.price * t.quantity;
     }
 
     if (prices.size() < 3)
