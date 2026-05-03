@@ -3,7 +3,7 @@ struct Trade
 {
     int buyId{};
     int sellId{};
-    int price{};
+    double price{};
     int quantity{};
     long long timestamp{};
     // brackets represent default initialisation

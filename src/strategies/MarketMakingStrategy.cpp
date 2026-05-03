@@ -10,13 +10,13 @@ void MarketMakingStrategy::onEvent(OrderBook &ob)
     if (ob.bids.empty() || ob.asks.empty())
         return;
 
-    int bestBid = ob.bids.begin()->first;
-    int bestAsk = ob.asks.begin()->first;
+    double bestBid = ob.bids.begin()->first;
+    double bestAsk = ob.asks.begin()->first;
 
-    int mid = (bestBid + bestAsk) / 2;
+    double mid = (bestBid + bestAsk) / 2;
 
-    int buyPrice = mid - spread;
-    int sellPrice = mid + spread;
+    double buyPrice = mid - spread;
+    double sellPrice = mid + spread;
 
     if (risk.killSwitch(currentPnL(ob)))
     {

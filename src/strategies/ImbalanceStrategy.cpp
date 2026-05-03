@@ -8,15 +8,22 @@ using namespace std;
 void ImbalanceStrategy::onEvent(OrderBook &ob)
 {
     int bidQty = 0, askQty = 0;
-
+    int levels = 0;
     for (auto &p : ob.bids)
+    {
         for (const auto &o : p.second)
             bidQty += o->quantity;
-
+        if (++levels == 3)
+            break;
+    }
+    levels = 0;
     for (auto &p : ob.asks)
+    {
         for (const auto &o : p.second)
             askQty += o->quantity;
-
+        if (++levels == 3)
+            break;
+    }
     if (bidQty + askQty == 0)
         return;
 
@@ -33,9 +40,10 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
     if (!risk.allowBuy(position))
     {
         int id = ob.generateOrderId();
-        // myOrders.insert(id);
+        myOrders.insert(id);
+        double mid = getMidPrice(ob);
 
-        execStats[id] = {0, 0, 1, 0};
+        execStats[id] = {0, 0, 1, mid};
 
         ob.addOrder({id,
                      Side::SELL,
@@ -51,9 +59,10 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
     if (!risk.allowSell(position))
     {
         int id = ob.generateOrderId();
-        // myOrders.insert(id);
+        myOrders.insert(id);
+        double mid = getMidPrice(ob);
 
-        execStats[id] = {0, 0, 1, 0};
+        execStats[id] = {0, 0, 1, mid};
 
         ob.addOrder({id,
                      Side::BUY,
@@ -65,38 +74,48 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
         return;
     }
 
+    double spread = askQty - bidQty;
+    double mid = (askQty + bidQty) / 2.0;
+    double spreadPct = spread / mid;
+    double upperThreshold = 0.5 + 0.2 * spreadPct;
+    double lowerThreshold = 0.5 - 0.2 * spreadPct;
+
     // STRATEGY
     int id = ob.generateOrderId();
-    if (imbalance > 0.7)
+    if (imbalance > upperThreshold)
     {
         // MARKET → expected price ~ mid
         if (risk.allowBuy(position))
         {
+            double mid = getMidPrice(ob);
+            double price = mid - 1; // passive buy
             myOrders.insert(id);
 
-            execStats[id] = {0, 0, 1, 0};
+            execStats[id] = {0, 0, 1, price};
 
             ob.addOrder({id,
                          Side::BUY,
-                         OrderType::MARKET,
-                         0,
+                         OrderType::LIMIT,
+                         price,
                          1,
                          0});
         }
     }
-    else if (imbalance < 0.3)
+    else if (imbalance < lowerThreshold)
     {
         // MARKET → expected price ~ mid
         if (risk.allowSell(position))
         {
+            double mid = getMidPrice(ob);
+            double price = mid + 1;
             myOrders.insert(id);
 
-            execStats[id] = {0, 0, 1, 0};
+            execStats[id] = {0, 0, 1, price};
 
             ob.addOrder({id,
                          Side::SELL,
-                         OrderType::MARKET,
-                         0,
+                         OrderType::LIMIT,
+                         price,
                          1,
                          0});
         }

@@ -5,7 +5,7 @@ struct Order
     int id{};
     Side side{};
     OrderType type{};
-    int price{};
+    double price{};
     int quantity{};
     long long timestamp{};
 };
