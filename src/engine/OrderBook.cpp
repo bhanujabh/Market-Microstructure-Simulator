@@ -8,7 +8,140 @@ using namespace std;
 
 void OrderBook::addOrder(const Order &order)
 {
+    // [FIX] Check duplicate before queuing, not just before inserting
+    if (orderMap.find(order.id) != orderMap.end())
+    {
+        cout << "ERROR: Duplicate Order ID " << order.id << endl;
+        return;
+    }
+    // [CHANGE 1] Guard against re-entrant calls from strategy callbacks.
+    // Instead of crashing or double-matching, queue the order and return.
+    // The outer call's drain loop will process it after the book settles.
+    if (isProcessing)
+    {
+        pendingOrders.push_back(order);
+        return;
+    }
     auto newOrder = std::make_unique<Order>(order); // allocate
+    newOrder->timestamp = orderTimestamp++;
+    Order *rawPtr = newOrder.get();
+
+    if (orderMap.find(order.id) != orderMap.end())
+    {
+        cout << "ERROR: Duplicate Order ID " << order.id << endl;
+        return;
+    }
+
+    // [CHANGE 2] Set isProcessing before any matching begins so any
+    // re-entrant addOrder call (from strategy->onTrade) hits the guard above.
+    isProcessing = true;
+
+    _processOrder(order);
+
+    // if (order.type == OrderType::MARKET)
+    // {
+    //     cout << "Market Order Received: ID=" << newOrder->id << " Time=" << newOrder->timestamp << endl;
+    //     if (order.side == Side::BUY)
+    //         executeMarketBuy(*this, rawPtr);
+    //     else
+    //         executeMarketSell(*this, rawPtr);
+
+    //     onEvent(EventType::ORDER_ADD);
+    //     return;
+    // }
+
+    // if (order.side == Side::BUY)
+    // {
+    //     auto &q = bids[order.price];
+    //     q.push_back(std::move(newOrder));
+    //     auto it = prev(q.end());
+    //     orderMap.emplace(order.id, OrderNode(rawPtr, it));
+    // }
+    // else
+    // {
+    //     auto &q = asks[order.price];
+    //     q.push_back(std::move(newOrder));
+    //     auto it = prev(q.end());
+    //     orderMap.emplace(order.id, OrderNode(rawPtr, it));
+    // }
+
+    // cout << "Order Added: ID=" << order.id << " Time=" << rawPtr->timestamp << endl;
+
+    // matchOrders(*this);
+    // onEvent(EventType::ORDER_ADD);
+
+    // [CHANGE 3] Drain loop — process any orders the strategy queued during
+    // onTrade callbacks. Each iteration may produce more trades → more queued
+    // orders, so we loop until the queue is fully empty.
+    // while (!pendingOrders.empty())
+    // {
+    //     // Snapshot and clear atomically so new entries during this loop
+    //     // go into pendingOrders and are caught by the next iteration.
+    //     vector<Order> batch = std::move(pendingOrders);
+    //     pendingOrders.clear();
+
+    //     for (auto &pendingOrder : batch)
+    //     {
+    //         auto pendingNew = std::make_unique<Order>(pendingOrder);
+    //         pendingNew->timestamp = orderTimestamp++;
+    //         Order *pendingRaw = pendingNew.get();
+
+    //         if (orderMap.find(pendingOrder.id) != orderMap.end())
+    //         {
+    //             cout << "ERROR: Duplicate Order ID " << pendingOrder.id << endl;
+    //             continue;
+    //         }
+
+    //         if (pendingOrder.type == OrderType::MARKET)
+    //         {
+    //             cout << "Market Order Received: ID=" << pendingNew->id << " Time=" << pendingNew->timestamp << endl;
+    //             if (pendingOrder.side == Side::BUY)
+    //                 executeMarketBuy(*this, pendingRaw);
+    //             else
+    //                 executeMarketSell(*this, pendingRaw);
+    //         }
+    //         else
+    //         {
+    //             if (pendingOrder.side == Side::BUY)
+    //             {
+    //                 auto &q = bids[pendingOrder.price];
+    //                 q.push_back(std::move(pendingNew));
+    //                 auto it = prev(q.end());
+    //                 orderMap.emplace(pendingOrder.id, OrderNode(pendingRaw, it));
+    //             }
+    //             else
+    //             {
+    //                 auto &q = asks[pendingOrder.price];
+    //                 q.push_back(std::move(pendingNew));
+    //                 auto it = prev(q.end());
+    //                 orderMap.emplace(pendingOrder.id, OrderNode(pendingRaw, it));
+    //             }
+
+    //             cout << "Order Added: ID=" << pendingOrder.id << " Time=" << pendingRaw->timestamp << endl;
+    //             matchOrders(*this);
+    //         }
+    //     }
+    // }
+
+    while (!pendingOrders.empty())
+    {
+        vector<Order> batch = std::move(pendingOrders);
+        pendingOrders.clear();
+        for (auto &pending : batch)
+            _processOrder(pending);
+    }
+
+    onEvent(EventType::ORDER_ADD);
+    // [CHANGE 4] Only release the lock after the queue is fully drained,
+    // so no re-entrant call can sneak in during the drain loop itself.
+    isProcessing = false;
+}
+
+// [CHANGE] Extract the core insert+match logic into a helper
+// so both the main path and drain loop share it without duplicating onEvent
+void OrderBook::_processOrder(const Order &order)
+{
+    auto newOrder = std::make_unique<Order>(order);
     newOrder->timestamp = orderTimestamp++;
     Order *rawPtr = newOrder.get();
 
@@ -20,35 +153,45 @@ void OrderBook::addOrder(const Order &order)
 
     if (order.type == OrderType::MARKET)
     {
-        cout << "Market Order Received: ID=" << newOrder->id << " Time=" << newOrder->timestamp << endl;
-        if (order.side == Side::BUY)
-            executeMarketBuy(*this, rawPtr);
-        else
-            executeMarketSell(*this, rawPtr);
+        cout << "Market Order Received: ID=" << newOrder->id
+             << " Time=" << newOrder->timestamp << endl;
 
-        onEvent(EventType::ORDER_ADD);
+        // [FIX] Keep unique_ptr alive for the ENTIRE duration of market
+        // execution, including any re-entrant callbacks fired inside.
+        // Previously rawPtr could dangle if a callback triggered _processOrder
+        // again and the allocator reused the same memory.
+        Order *raw = newOrder.get();
+        activeMarketOrders.push_back(std::move(newOrder)); // [FIX] transfer ownership to stable storage
+
+        if (order.side == Side::BUY)
+            executeMarketBuy(*this, raw);
+        else
+            executeMarketSell(*this, raw);
+
+        // [FIX] Remove from stable storage only after execution fully completes
+        activeMarketOrders.erase(
+            std::remove_if(activeMarketOrders.begin(), activeMarketOrders.end(),
+                           [raw](const std::unique_ptr<Order> &p)
+                           { return p.get() == raw; }),
+            activeMarketOrders.end());
         return;
     }
-
     if (order.side == Side::BUY)
     {
         auto &q = bids[order.price];
         q.push_back(std::move(newOrder));
-        auto it = prev(q.end());
-        orderMap.emplace(order.id, OrderNode(rawPtr, it));
+        orderMap.emplace(order.id, OrderNode(rawPtr, prev(q.end())));
     }
     else
     {
         auto &q = asks[order.price];
         q.push_back(std::move(newOrder));
-        auto it = prev(q.end());
-        orderMap.emplace(order.id, OrderNode(rawPtr, it));
+        orderMap.emplace(order.id, OrderNode(rawPtr, prev(q.end())));
     }
 
-    cout << "Order Added: ID=" << order.id << " Time=" << rawPtr->timestamp << endl;
-
+    cout << "Order Added: ID=" << order.id
+         << " Time=" << rawPtr->timestamp << endl;
     matchOrders(*this);
-    onEvent(EventType::ORDER_ADD);
 }
 
 void OrderBook::cancelOrder(int orderId)
@@ -71,7 +214,6 @@ void OrderBook::cancelOrder(int orderId)
     }
     OrderNode &node = itMap->second;
 
-    OrderNode &node = orderMap.at(orderId);
     Order *order = node.order;
 
     Side side = order->side;  // save BEFORE erase
@@ -103,13 +245,11 @@ void OrderBook::cancelOrder(int orderId)
 
     cout << "Order " << orderId << " cancelled\n";
 
-    if (!isStrategyRunning)
-    {
+    if (!isProcessing)
         onEvent(EventType::ORDER_CANCEL);
-    }
 }
 
-void OrderBook::modifyOrder(int orderId, int newPrice, int newQty)
+void OrderBook::modifyOrder(int orderId, double newPrice, int newQty)
 {
     if (orderMap.find(orderId) == orderMap.end())
     {
@@ -229,12 +369,24 @@ void OrderBook::onEvent(EventType event)
     long long ts = orderTimestamp + tradeTimestamp; // unified timeline
     takeSnapshot(ts);
 
-    // Without this, infinite recursion:
-    if (strategy && !isStrategyRunning)
+    // [CHANGE] Use isProcessing instead of isStrategyRunning
+    // onEvent is only called after isProcessing = false, so this
+    // guard is just safety for cancelOrder/modifyOrder paths
+    if (strategy && !isProcessing)
     {
-        isStrategyRunning = true;  // block re-entry
-        strategy->onEvent(*this);  // run strategy
-        isStrategyRunning = false; // allow future calls
+        isProcessing = true; // ← Set BEFORE calling strategy
+        strategy->onEvent(*this);
+
+        // Drain any orders the strategy queued
+        while (!pendingOrders.empty())
+        {
+            vector<Order> batch = std::move(pendingOrders);
+            pendingOrders.clear();
+            for (auto &pending : batch)
+                _processOrder(pending);
+        }
+
+        isProcessing = false; // ← Release AFTER draining
     }
 }
 

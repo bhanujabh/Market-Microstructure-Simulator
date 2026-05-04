@@ -1,5 +1,8 @@
 #pragma once
-#include "Strategy.h"
+#include "../strategies/Strategy.h"
+
+class OrderBook;
+class Trade;
 
 class ImbalanceStrategy : public Strategy
 {

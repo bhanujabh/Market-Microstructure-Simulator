@@ -3,6 +3,7 @@
 #include <cmath>
 #include <unordered_map>
 #include "Metrics.h"
+#include "../core/Types.h"
 
 using namespace std;
 
@@ -61,7 +62,22 @@ double Metrics::getFillRate(const std::unordered_map<int, ExecutionStats> &execS
 double Metrics::getSlippage(const std::unordered_map<int, ExecutionStats> &execStats,
                             int orderId)
 {
-    return getAvgExecutionPrice(execStats, orderId) - execStats.at(orderId).expectedPrice;
+    auto it = execStats.find(orderId);
+    if (it == execStats.end())
+        return 0;
+
+    const auto &s = it->second;
+
+    if (s.filledQty == 0)
+        return 0;
+
+    double avgPx = s.totalValue / s.filledQty;
+
+    // FIX: side-aware slippage
+    if (s.side == Side::BUY)
+        return avgPx - s.expectedPrice;
+    else
+        return s.expectedPrice - avgPx;
 }
 
 double Metrics::getSharpe(const std::vector<double> &pnlHistory)

@@ -110,47 +110,74 @@
     <script>
       let chart;
 
-      fetch("../cpp_simulator/output.json")
+      // ===== FIX 1: Correct path (important) =====
+      fetch("../backtest_results.json")
         .then((r) => r.json())
         .then((data) => {
-          renderMetrics(data.metrics);
-          renderBook(data.bids, data.asks);
-          renderTrades(data.trades);
-          renderHeatmap(data.snapshots);
-          renderButtons(data.strategies);
+          console.log(data); // DEBUG
 
-          loadStrategy("Spread", data.strategies);
+          // ===== FIX 2: Safe checks to avoid crashes =====
+          renderMetrics(data.metrics || {});
+          renderBook(data.bids || [], data.asks || []);
+          renderTrades(data.trades || []);
+          renderHeatmap(data.snapshots || []);
+
+          // ===== FIX 3: Handle missing strategies =====
+          const strategies = data.strategies || {
+            Spread: {
+              pnl: 0,
+              sharpe: 0,
+              drawdown: 0,
+              trades: 0,
+              pnlHistory: [],
+            },
+          };
+
+          renderButtons(strategies);
+          loadStrategy("Spread", strategies);
         });
 
       function renderMetrics(m) {
         document.getElementById("metrics").innerHTML = `
-<div class="card">Best Bid<div class="metric">${m.bestBid}</div></div>
-<div class="card">Best Ask<div class="metric">${m.bestAsk}</div></div>
-<div class="card">Spread<div class="metric">${m.spread}</div></div>
-<div class="card">Trades<div class="metric">${m.tradeCount}</div></div>
+<div class="card">Best Bid<div class="metric">${m.bestBid ?? 0}</div></div>
+<div class="card">Best Ask<div class="metric">${m.bestAsk ?? 0}</div></div>
+<div class="card">Spread<div class="metric">${m.spread ?? 0}</div></div>
+<div class="card">Trades<div class="metric">${m.tradeCount ?? 0}</div></div>
 `;
       }
 
       function renderBook(bids, asks) {
         let b = `<tr><th>Price</th><th>Qty</th></tr>`;
-        bids.forEach(
-          (x) => (b += `<tr><td>${x.price}</td><td>${x.qty}</td></tr>`),
-        );
+
+        // ===== FIX 4: Handle empty bids =====
+        if (bids.length === 0) {
+          b += `<tr><td colspan="2">No bids</td></tr>`;
+        } else {
+          bids.forEach(
+            (x) => (b += `<tr><td>${x.price}</td><td>${x.qty}</td></tr>`),
+          );
+        }
         document.getElementById("bids").innerHTML = b;
 
         let a = `<tr><th>Price</th><th>Qty</th></tr>`;
-        asks.forEach(
-          (x) => (a += `<tr><td>${x.price}</td><td>${x.qty}</td></tr>`),
-        );
+
+        if (asks.length === 0) {
+          a += `<tr><td colspan="2">No asks</td></tr>`;
+        } else {
+          asks.forEach(
+            (x) => (a += `<tr><td>${x.price}</td><td>${x.qty}</td></tr>`),
+          );
+        }
         document.getElementById("asks").innerHTML = a;
       }
 
       function renderTrades(t) {
-        let h = `<tr><th>Price</th><th>Qty</th><th>Buy</th><th>Sell</th></tr>`;
+        let h = `<tr><th>Price</th><th>Qty</th><th>Buyer Id</th><th>Seller ID</th></tr>`;
+
         t.forEach((x) => {
           h += `<tr>
 <td>${x.price}</td>
-<td>${x.qty}</td>
+<td>${x.quantity}</td> <!-- FIX 5: correct field -->
 <td>${x.buyId}</td>
 <td>${x.sellId}</td>
 </tr>`;
@@ -161,26 +188,34 @@
 
       function renderButtons(strats) {
         let html = "";
-        for (let k in strats) {
-          html += `<button onclick='loadStrategy("${k}",strategies)'>${k}</button>`;
-        }
+
+        // ===== FIX 6: Object iteration + correct onclick =====
+        Object.keys(strats).forEach((k) => {
+          html += `<button onclick='loadStrategy("${k}", window.strategies)'>${k}</button>`;
+        });
+
         document.getElementById("buttons").innerHTML = html;
+
+        // ===== FIX 7: store globally =====
         window.strategies = strats;
       }
 
       function loadStrategy(name, strats) {
         let s = strats[name];
 
+        // ===== FIX 8: Safe rendering if missing =====
+        if (!s) return;
+
         document.getElementById("stats").innerHTML = `
 <div class="grid">
-<div class="card">PnL<div class="metric">${s.pnl.toFixed(2)}</div></div>
-<div class="card">Sharpe<div class="metric">${s.sharpe.toFixed(2)}</div></div>
-<div class="card">Drawdown<div class="metric">${s.drawdown.toFixed(2)}</div></div>
-<div class="card">Trades<div class="metric">${s.trades}</div></div>
+<div class="card">PnL<div class="metric">${(s.pnl ?? 0).toFixed(2)}</div></div>
+<div class="card">Sharpe<div class="metric">${(s.sharpe ?? 0).toFixed(2)}</div></div>
+<div class="card">Drawdown<div class="metric">${(s.drawdown ?? 0).toFixed(2)}</div></div>
+<div class="card">Trades<div class="metric">${s.trades ?? 0}</div></div>
 </div>
 `;
 
-        drawChart(name, s.pnlHistory);
+        drawChart(name, s.pnlHistory || []);
       }
 
       function drawChart(name, data) {
@@ -203,9 +238,16 @@
 
       function renderHeatmap(snap) {
         let h = "";
+
+        // ===== FIX 9: Your backend does NOT provide bidDepth/askDepth =====
+        // Use timestamp-based placeholder intensity
         snap.forEach((x) => {
-          let val = (x.bidDepth + x.askDepth) * 25;
-          h += `<div class="box" style="background:rgb(${val},50,150)" title="t=${x.timestamp}"></div>`;
+          let val = (x.timestamp % 10) * 25;
+
+          h += `<div class="box" 
+      style="background:rgb(${val},50,150)" 
+      title="t=${x.timestamp}">
+      </div>`;
         });
 
         document.getElementById("heatmap").innerHTML = h;

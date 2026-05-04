@@ -23,7 +23,7 @@ void MarketReplay::replayCSV(const std::string &filename, OrderBook &ob)
 
     // Skip header row
     getline(file, line);
-
+    int replayOwnerId = 10000000;
     while (getline(file, line))
     {
         if (line.empty())
@@ -64,13 +64,14 @@ void MarketReplay::replayCSV(const std::string &filename, OrderBook &ob)
         else
             side = Side::SELL;
 
-        Order order{
-            id,
-            side,
-            type,
-            price,
-            qty,
-            0};
+        Order order{}; // Zero-initialize ALL fields first
+        order.id = id;
+        order.side = side;
+        order.type = type;
+        order.price = static_cast<double>(price);
+        order.quantity = qty;
+        order.timestamp = 0;             // Explicitly set
+        order.ownerId = replayOwnerId++; // Explicitly set - no ambiguity
 
         ob.addOrder(order);
     }

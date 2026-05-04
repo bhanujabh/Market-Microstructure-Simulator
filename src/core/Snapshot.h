@@ -4,6 +4,6 @@
 struct Snapshot
 {
     long long timestamp{};
-    std::vector<std::pair<int, int>> bidLevels; // price, total qty
-    std::vector<std::pair<int, int>> askLevels;
+    std::vector<std::pair<double, int>> bidLevels; // price, total qty
+    std::vector<std::pair<double, int>> askLevels;
 };

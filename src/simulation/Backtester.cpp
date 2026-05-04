@@ -6,7 +6,7 @@
 
 using namespace std;
 
-void Backtester::run(
+std::unique_ptr<OrderBook> Backtester::run(
     const std::string &inputFile,
     Strategy &strategy,
     bool printTrades,
@@ -44,4 +44,5 @@ void Backtester::run(
             ob,
             "backtest_results.json");
     }
+    return std::unique_ptr<OrderBook>(new OrderBook(std::move(ob)));
 }

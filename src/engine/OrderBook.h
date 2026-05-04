@@ -24,7 +24,18 @@ struct OrderNode
 
 class OrderBook
 {
+private:
+    void _processOrder(const Order &order);
+
 public:
+    OrderBook() = default;
+    // disable copy
+    OrderBook(const OrderBook &) = delete;
+    OrderBook &operator=(const OrderBook &) = delete;
+
+    // enable move
+    OrderBook(OrderBook &&) noexcept = default;
+    OrderBook &operator=(OrderBook &&) noexcept = default;
     std::unordered_map<int, OrderNode> orderMap;
 
     std::map<double,
@@ -36,6 +47,8 @@ public:
         asks;
 
     std::vector<Trade> trades;
+    std::vector<Order> pendingOrders;
+    bool isProcessing = false;
 
     std::vector<Snapshot> snapshots;
 
@@ -43,11 +56,13 @@ public:
     long long orderTimestamp = 0;
     long long tradeTimestamp = 0;
 
-    bool isStrategyRunning = false;
+    // [FIX] Stable storage for in-flight market orders so their raw pointers
+    // remain valid across re-entrant callbacks during execution
+    std::vector<std::unique_ptr<Order>> activeMarketOrders;
 
     void addOrder(const Order &order);
     void cancelOrder(int orderId);
-    void modifyOrder(int orderId, int newPrice, int newQty);
+    void modifyOrder(int orderId, double newPrice, int newQty);
 
     void takeSnapshot(long long timestamp);
     void printSnapshots();

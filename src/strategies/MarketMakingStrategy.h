@@ -1,11 +1,17 @@
 #pragma once
-#include "Strategy.h"
+#include "../strategies/Strategy.h"
+
+class OrderBook;
+class Trade;
 
 class MarketMakingStrategy : public Strategy
 {
 public:
     int buyOrderId = -1;
     int sellOrderId = -1;
+
+    double lastBuyPrice = -1;
+    double lastSellPrice = -1;
 
     int spread = 2;
     int myId = 3;

@@ -22,7 +22,7 @@ namespace
         return dist(rng) == 0 ? "BUY" : "SELL";
     }
 
-    string randomType(int marketOrderChancePercent = 20)
+    string randomType(int marketOrderChancePercent = 40)
     {
         uniform_int_distribution<int> dist(1, 100);
         return dist(rng) <= marketOrderChancePercent
@@ -92,13 +92,28 @@ void DataGenerator::generateRandomSession(
         string type = randomType();
         string side = randomSide();
 
-        int rowPrice =
-            (type == "MARKET") ? 0 : price;
+        int rowPrice;
+
+        if (type == "MARKET")
+        {
+            rowPrice = 0;
+        }
+        else
+        {
+            if (side == "BUY")
+            {
+                rowPrice = price - (rng() % 3); // slightly lower
+            }
+            else
+            {
+                rowPrice = price + (rng() % 3); // slightly higher
+            }
+        }
 
         writeRow(
             file,
             i,
-            1000 + i,
+            100000 + i,
             type,
             side,
             rowPrice,
@@ -140,13 +155,28 @@ void DataGenerator::generateUptrendSession(
         string type = randomType();
         string side = randomSide();
 
-        int rowPrice =
-            (type == "MARKET") ? 0 : price;
+        int rowPrice;
+
+        if (type == "MARKET")
+        {
+            rowPrice = 0;
+        }
+        else
+        {
+            if (side == "BUY")
+            {
+                rowPrice = price - (rng() % 3); // slightly lower
+            }
+            else
+            {
+                rowPrice = price + (rng() % 3); // slightly higher
+            }
+        }
 
         writeRow(
             file,
             i,
-            2000 + i,
+            200000 + i,
             type,
             side,
             rowPrice,
@@ -188,13 +218,28 @@ void DataGenerator::generateDowntrendSession(
         string type = randomType();
         string side = randomSide();
 
-        int rowPrice =
-            (type == "MARKET") ? 0 : price;
+        int rowPrice;
+
+        if (type == "MARKET")
+        {
+            rowPrice = 0;
+        }
+        else
+        {
+            if (side == "BUY")
+            {
+                rowPrice = price - (rng() % 3); // slightly lower
+            }
+            else
+            {
+                rowPrice = price + (rng() % 3); // slightly higher
+            }
+        }
 
         writeRow(
             file,
             i,
-            3000 + i,
+            300000 + i,
             type,
             side,
             rowPrice,
@@ -236,13 +281,28 @@ void DataGenerator::generateVolatileSession(
         string type = randomType(35);
         string side = randomSide();
 
-        int rowPrice =
-            (type == "MARKET") ? 0 : price;
+        int rowPrice;
+
+        if (type == "MARKET")
+        {
+            rowPrice = 0;
+        }
+        else
+        {
+            if (side == "BUY")
+            {
+                rowPrice = price - (rng() % 3); // slightly lower
+            }
+            else
+            {
+                rowPrice = price + (rng() % 3); // slightly higher
+            }
+        }
 
         writeRow(
             file,
             i,
-            4000 + i,
+            400000 + i,
             type,
             side,
             rowPrice,

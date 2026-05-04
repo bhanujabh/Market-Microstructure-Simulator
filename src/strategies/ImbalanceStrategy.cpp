@@ -2,6 +2,8 @@
 #include "ImbalanceStrategy.h"
 #include "../core/Types.h"
 #include "../analytics/Metrics.h"
+#include "../engine/OrderBook.h"
+#include "../core/Trade.h"
 
 using namespace std;
 
@@ -28,6 +30,8 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
         return;
 
     double imbalance = (double)bidQty / (bidQty + askQty);
+    double strength = abs(imbalance - 0.5);
+    int qty = max(1, (int)(strength * 10));
 
     if (risk.killSwitch(currentPnL(ob)))
     {
@@ -37,68 +41,89 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
 
     // RISK MANAGEMENT FIRST
     // ===== CHANGED: use RiskManager instead of maxPosition =====
-    if (!risk.allowBuy(position))
+    if (!risk.allowBuy(position, qty))
     {
+        if (position > 3)
+            qty = 1;
         int id = ob.generateOrderId();
         myOrders.insert(id);
         double mid = getMidPrice(ob);
 
-        execStats[id] = {0, 0, 1, mid};
+        execStats[id] = {0.0, 0, qty, mid, Side::SELL};
 
         ob.addOrder({id,
                      Side::SELL,
                      OrderType::MARKET,
                      0,
-                     1,
+                     qty,
                      0, myId});
 
         return;
     }
 
     // ===== CHANGED: use RiskManager instead of maxPosition =====
-    if (!risk.allowSell(position))
+    if (!risk.allowSell(position, qty))
     {
+        if (position < -3)
+            qty = 1;
         int id = ob.generateOrderId();
         myOrders.insert(id);
         double mid = getMidPrice(ob);
 
-        execStats[id] = {0, 0, 1, mid};
+        execStats[id] = {0.0, 0, qty, mid, Side::BUY};
 
         ob.addOrder({id,
                      Side::BUY,
                      OrderType::MARKET,
                      0,
-                     1,
+                     qty,
                      0, myId});
 
         return;
     }
 
+    if (position > 0 && imbalance < 0.5)
+    {
+        int id = ob.generateOrderId();
+        myOrders.insert(id);
+
+        double mid = getMidPrice(ob);
+
+        execStats[id] = {0.0, 0, abs(position), mid, Side::SELL};
+
+        ob.addOrder({id, Side::SELL, OrderType::MARKET, 0, abs(position), 0, myId});
+    }
+
     double spread = askQty - bidQty;
     // normalising the spread
-    double mid = (askQty + bidQty) / 2.0;
-    double spreadPct = spread / mid;
+    double volumeMid = (askQty + bidQty) / 2.0;
+    double spreadPct = spread / volumeMid;
     double upperThreshold = 0.5 + 0.2 * spreadPct;
     double lowerThreshold = 0.5 - 0.2 * spreadPct;
 
     // STRATEGY
-    int id = ob.generateOrderId();
+
     if (imbalance > upperThreshold)
     {
         // MARKET → expected price ~ mid
         if (risk.allowBuy(position))
         {
+            int id = ob.generateOrderId();
             double mid = getMidPrice(ob);
-            double price = mid - 1; // passive buy
+            double price = mid - (1 + strength * 2); // passive buy
+            double strength = abs(imbalance - 0.5);
+            int qty = max(1, (int)(strength * 10));
+            if (position < -3)
+                qty = 1;
             myOrders.insert(id);
 
-            execStats[id] = {0, 0, 1, price};
+            execStats[id] = {0.0, 0, qty, price, Side::BUY};
 
             ob.addOrder({id,
                          Side::BUY,
                          OrderType::LIMIT,
                          price,
-                         1,
+                         qty,
                          0, myId});
         }
     }
@@ -107,17 +132,22 @@ void ImbalanceStrategy::onEvent(OrderBook &ob)
         // MARKET → expected price ~ mid
         if (risk.allowSell(position))
         {
+            int id = ob.generateOrderId();
             double mid = getMidPrice(ob);
-            double price = mid + 1;
+            double price = mid + (1 + strength * 2);
+            double strength = abs(imbalance - 0.5);
+            int qty = max(1, (int)(strength * 10));
+            if (position > 3)
+                qty = 1;
             myOrders.insert(id);
 
-            execStats[id] = {0, 0, 1, price};
+            execStats[id] = {0.0, 0, qty, price, Side::SELL};
 
             ob.addOrder({id,
                          Side::SELL,
                          OrderType::LIMIT,
                          price,
-                         1,
+                         qty,
                          0, myId});
         }
     }
@@ -173,6 +203,8 @@ void ImbalanceStrategy::onTrade(const Trade &t, OrderBook &ob)
     cout << "Trade: " << t.price << " | Position: " << position << " | Cash: " << cash << endl;
 
     pnlHistory.push_back(currentPnL(ob));
+    cout << "Checking execStats for buyId: " << t.buyId << endl;
+    cout << "Checking execStats for sellId: " << t.sellId << endl;
 }
 
 void ImbalanceStrategy::printStats(OrderBook &ob)

@@ -1,362 +1,648 @@
 {
-  "totalTrades": 51,
+  "metrics": {
+    "bestBid": 96,
+    "bestAsk": 103,
+    "spread": 7,
+    "tradeCount": 83
+  },
+  "bids": [
+    {"price": 96, "qty": 1},
+    {"price": 95, "qty": 1},
+    {"price": 93, "qty": 10},
+  ],
+  "asks": [
+    {"price": 103, "qty": 6},
+  ],
   "trades": [
     {
-      "buyId": 1003,
-      "sellId": 1005,
+      "price": 99,
+      "quantity": 5,
+      "buyId": 100001,
+      "sellId": 100006
+    },
+    {
+      "price": 99,
+      "quantity": 3,
+      "buyId": 100005,
+      "sellId": 100006
+    },
+    {
+      "price": 103,
+      "quantity": 2,
+      "buyId": 100009,
+      "sellId": 100003
+    },
+    {
+      "price": 103,
+      "quantity": 6,
+      "buyId": 100010,
+      "sellId": 100003
+    },
+    {
+      "price": 105,
+      "quantity": 2,
+      "buyId": 100010,
+      "sellId": 100004
+    },
+    {
+      "price": 101,
+      "quantity": 2,
+      "buyId": 100005,
+      "sellId": 100011
+    },
+    {
+      "price": 96,
+      "quantity": 4,
+      "buyId": 100007,
+      "sellId": 100011
+    },
+    {
+      "price": 96,
+      "quantity": 1,
+      "buyId": 100008,
+      "sellId": 100012
+    },
+    {
+      "price": 96,
+      "quantity": 2,
+      "buyId": 100008,
+      "sellId": 100013
+    },
+    {
+      "price": 99,
+      "quantity": 5,
+      "buyId": 100014,
+      "sellId": 100019
+    },
+    {
+      "price": 96,
+      "quantity": 5,
+      "buyId": 100008,
+      "sellId": 100019
+    },
+    {
+      "price": 97,
+      "quantity": 1,
+      "buyId": 100022,
+      "sellId": 100023
+    },
+    {
+      "price": 100,
+      "quantity": 1,
+      "buyId": 100026,
+      "sellId": 100028
+    },
+    {
+      "price": 101,
+      "quantity": 1,
+      "buyId": 100029,
+      "sellId": 100030
+    },
+    {
+      "price": 100,
+      "quantity": 5,
+      "buyId": 100026,
+      "sellId": 100031
+    },
+    {
+      "price": 101,
+      "quantity": 2,
+      "buyId": 100032,
+      "sellId": 100030
+    },
+    {
+      "price": 102,
+      "quantity": 1,
+      "buyId": 100032,
+      "sellId": 100027
+    },
+    {
+      "price": 100,
+      "quantity": 1,
+      "buyId": 100026,
+      "sellId": 100033
+    },
+    {
+      "price": 102,
+      "quantity": 8,
+      "buyId": 100034,
+      "sellId": 100027
+    },
+    {
+      "price": 102,
+      "quantity": 1,
+      "buyId": 100035,
+      "sellId": 100027
+    },
+    {
+      "price": 98,
+      "quantity": 2,
+      "buyId": 100026,
+      "sellId": 100037
+    },
+    {
+      "price": 98,
+      "quantity": 5,
+      "buyId": 100036,
+      "sellId": 100037
+    },
+    {
+      "price": 97,
+      "quantity": 4,
+      "buyId": 100022,
+      "sellId": 100039
+    },
+    {
+      "price": 97,
+      "quantity": 4,
+      "buyId": 100024,
+      "sellId": 100039
+    },
+    {
+      "price": 101,
+      "quantity": 6,
+      "buyId": 100040,
+      "sellId": 100038
+    },
+    {
+      "price": 99,
+      "quantity": 3,
+      "buyId": 100044,
+      "sellId": 100042
+    },
+    {
+      "price": 101,
+      "quantity": 2,
+      "buyId": 100044,
+      "sellId": 100038
+    },
+    {
+      "price": 101,
+      "quantity": 9,
+      "buyId": 100047,
+      "sellId": 100041
+    },
+    {
+      "price": 100,
+      "quantity": 1,
+      "buyId": 100052,
+      "sellId": 100049
+    },
+    {
+      "price": 100,
+      "quantity": 5,
+      "buyId": 100053,
+      "sellId": 100049
+    },
+    {
+      "price": 100,
+      "quantity": 5,
+      "buyId": 100053,
+      "sellId": 100050
+    },
+    {
+      "price": 97,
+      "quantity": 4,
+      "buyId": 100024,
+      "sellId": 100054
+    },
+    {
+      "price": 97,
+      "quantity": 4,
+      "buyId": 100046,
+      "sellId": 100054
+    },
+    {
+      "price": 98,
+      "quantity": 1,
+      "buyId": 100058,
+      "sellId": 100057
+    },
+    {
+      "price": 99,
+      "quantity": 3,
+      "buyId": 100058,
+      "sellId": 100056
+    },
+    {
+      "price": 97,
+      "quantity": 1,
+      "buyId": 100046,
+      "sellId": 100059
+    },
+    {
+      "price": 97,
+      "quantity": 1,
+      "buyId": 100048,
+      "sellId": 100059
+    },
+    {
+      "price": 97,
+      "quantity": 6,
+      "buyId": 100048,
+      "sellId": 100060
+    },
+    {
+      "price": 96,
+      "quantity": 2,
+      "buyId": 100008,
+      "sellId": 100060
+    },
+    {
       "price": 97,
       "quantity": 3,
-      "timestamp": 0
+      "buyId": 100061,
+      "sellId": 100066
     },
     {
-      "buyId": 1002,
-      "sellId": 1006,
       "price": 96,
-      "quantity": 1,
-      "timestamp": 1
-    },
-    {
-      "buyId": 1004,
-      "sellId": 1006,
-      "price": 96,
-      "quantity": 1,
-      "timestamp": 2
-    },
-    {
-      "buyId": 1006,
-      "sellId": 1006,
-      "price": 96,
-      "quantity": 1,
-      "timestamp": 3
-    },
-    {
-      "buyId": 1007,
-      "sellId": 1006,
-      "price": 96,
-      "quantity": 1,
-      "timestamp": 4
-    },
-    {
-      "buyId": 1007,
-      "sellId": 1010,
-      "price": 94,
-      "quantity": 1,
-      "timestamp": 5
-    },
-    {
-      "buyId": 1012,
-      "sellId": 1003,
-      "price": 99,
-      "quantity": 1,
-      "timestamp": 6
-    },
-    {
-      "buyId": 1012,
-      "sellId": 1023,
-      "price": 99,
-      "quantity": 1,
-      "timestamp": 7
-    },
-    {
-      "buyId": 1007,
-      "sellId": 1016,
-      "price": 91,
-      "quantity": 4,
-      "timestamp": 8
-    },
-    {
-      "buyId": 1009,
-      "sellId": 1016,
-      "price": 91,
-      "quantity": 2,
-      "timestamp": 9
-    },
-    {
-      "buyId": 1022,
-      "sellId": 1016,
-      "price": 91,
-      "quantity": 1,
-      "timestamp": 10
-    },
-    {
-      "buyId": 1008,
-      "sellId": 1027,
-      "price": 91,
-      "quantity": 2,
-      "timestamp": 11
-    },
-    {
-      "buyId": 1011,
-      "sellId": 1027,
-      "price": 91,
-      "quantity": 2,
-      "timestamp": 12
-    },
-    {
-      "buyId": 1014,
-      "sellId": 1027,
-      "price": 91,
-      "quantity": 2,
-      "timestamp": 13
-    },
-    {
-      "buyId": 1014,
-      "sellId": 1028,
-      "price": 90,
-      "quantity": 4,
-      "timestamp": 14
-    },
-    {
-      "buyId": 1015,
-      "sellId": 1024,
-      "price": 93,
-      "quantity": 1,
-      "timestamp": 15
-    },
-    {
-      "buyId": 1018,
-      "sellId": 1028,
-      "price": 90,
       "quantity": 5,
-      "timestamp": 16
+      "buyId": 100016,
+      "sellId": 100066
     },
     {
-      "buyId": 1032,
-      "sellId": 1033,
       "price": 96,
-      "quantity": 4,
-      "timestamp": 17
-    },
-    {
-      "buyId": 1032,
-      "sellId": 1035,
-      "price": 95,
-      "quantity": 3,
-      "timestamp": 18
-    },
-    {
-      "buyId": 1031,
-      "sellId": 1025,
-      "price": 96,
-      "quantity": 1,
-      "timestamp": 19
-    },
-    {
-      "buyId": 1031,
-      "sellId": 1035,
-      "price": 95,
       "quantity": 2,
-      "timestamp": 20
+      "buyId": 100016,
+      "sellId": 100070
     },
     {
-      "buyId": 1030,
-      "sellId": 1036,
-      "price": 94,
-      "quantity": 4,
-      "timestamp": 21
-    },
-    {
-      "buyId": 1034,
-      "sellId": 1036,
-      "price": 94,
-      "quantity": 3,
-      "timestamp": 22
-    },
-    {
-      "buyId": 1034,
-      "sellId": 1037,
-      "price": 94,
-      "quantity": 3,
-      "timestamp": 23
-    },
-    {
-      "buyId": 1034,
-      "sellId": 1026,
-      "price": 94,
-      "quantity": 1,
-      "timestamp": 24
-    },
-    {
-      "buyId": 1034,
-      "sellId": 1027,
-      "price": 94,
-      "quantity": 1,
-      "timestamp": 25
-    },
-    {
-      "buyId": 1039,
-      "sellId": 1028,
-      "price": 94,
-      "quantity": 1,
-      "timestamp": 26
-    },
-    {
-      "buyId": 1041,
-      "sellId": 1029,
-      "price": 94,
-      "quantity": 1,
-      "timestamp": 27
-    },
-    {
-      "buyId": 1041,
-      "sellId": 1042,
-      "price": 94,
-      "quantity": 3,
-      "timestamp": 28
-    },
-    {
-      "buyId": 1018,
-      "sellId": 1030,
-      "price": 93,
-      "quantity": 1,
-      "timestamp": 29
-    },
-    {
-      "buyId": 1018,
-      "sellId": 1031,
-      "price": 93,
-      "quantity": 1,
-      "timestamp": 30
-    },
-    {
-      "buyId": 1043,
-      "sellId": 1042,
-      "price": 94,
+      "price": 96,
       "quantity": 6,
-      "timestamp": 31
+      "buyId": 100018,
+      "sellId": 100070
     },
     {
-      "buyId": 1040,
-      "sellId": 1032,
-      "price": 93,
+      "price": 97,
       "quantity": 1,
-      "timestamp": 32
+      "buyId": 100072,
+      "sellId": 100069
     },
     {
-      "buyId": 1040,
-      "sellId": 1033,
-      "price": 93,
+      "price": 96,
+      "quantity": 3,
+      "buyId": 100018,
+      "sellId": 100073
+    },
+    {
+      "price": 96,
+      "quantity": 4,
+      "buyId": 100025,
+      "sellId": 100073
+    },
+    {
+      "price": 96,
       "quantity": 1,
-      "timestamp": 33
+      "buyId": 100045,
+      "sellId": 100073
     },
     {
-      "buyId": 1040,
-      "sellId": 1044,
-      "price": 93,
+      "price": 97,
       "quantity": 1,
-      "timestamp": 34
+      "buyId": 100074,
+      "sellId": 100069
     },
     {
-      "buyId": 1017,
-      "sellId": 1034,
-      "price": 92,
-      "quantity": 1,
-      "timestamp": 35
-    },
-    {
-      "buyId": 1017,
-      "sellId": 1035,
-      "price": 92,
-      "quantity": 1,
-      "timestamp": 36
-    },
-    {
-      "buyId": 1045,
-      "sellId": 1036,
-      "price": 93,
-      "quantity": 1,
-      "timestamp": 37
-    },
-    {
-      "buyId": 1046,
-      "sellId": 1037,
-      "price": 93,
-      "quantity": 1,
-      "timestamp": 38
-    },
-    {
-      "buyId": 1047,
-      "sellId": 1038,
-      "price": 95,
+      "price": 98,
       "quantity": 9,
-      "timestamp": 39
+      "buyId": 100074,
+      "sellId": 100062
     },
     {
-      "buyId": 1017,
-      "sellId": 1038,
-      "price": 92,
-      "quantity": 1,
-      "timestamp": 40
-    },
-    {
-      "buyId": 1017,
-      "sellId": 1039,
-      "price": 92,
-      "quantity": 1,
-      "timestamp": 41
-    },
-    {
-      "buyId": 1017,
-      "sellId": 1040,
-      "price": 92,
-      "quantity": 1,
-      "timestamp": 42
-    },
-    {
-      "buyId": 1025,
-      "sellId": 1041,
-      "price": 92,
-      "quantity": 1,
-      "timestamp": 43
-    },
-    {
-      "buyId": 1050,
-      "sellId": 1049,
-      "price": 94,
+      "price": 98,
       "quantity": 7,
-      "timestamp": 44
+      "buyId": 100078,
+      "sellId": 100079
     },
     {
-      "buyId": 1026,
-      "sellId": 1042,
-      "price": 92,
+      "price": 96,
       "quantity": 1,
-      "timestamp": 45
+      "buyId": 100045,
+      "sellId": 100079
     },
     {
-      "buyId": 1050,
-      "sellId": 1038,
-      "price": 95,
-      "quantity": 1,
-      "timestamp": 46
+      "price": 99,
+      "quantity": 2,
+      "buyId": 100080,
+      "sellId": 100056
     },
     {
-      "buyId": 1026,
-      "sellId": 1043,
-      "price": 92,
+      "price": 99,
       "quantity": 1,
-      "timestamp": 47
+      "buyId": 100080,
+      "sellId": 100063
     },
     {
-      "buyId": 1050,
-      "sellId": 1048,
-      "price": 95,
-      "quantity": 1,
-      "timestamp": 48
+      "price": 99,
+      "quantity": 7,
+      "buyId": 100080,
+      "sellId": 100064
     },
     {
-      "buyId": 1026,
-      "sellId": 1044,
-      "price": 92,
-      "quantity": 1,
-      "timestamp": 49
+      "price": 99,
+      "quantity": 3,
+      "buyId": 100081,
+      "sellId": 100064
     },
     {
-      "buyId": 1026,
-      "sellId": 1045,
-      "price": 92,
+      "price": 99,
+      "quantity": 4,
+      "buyId": 100081,
+      "sellId": 100071
+    },
+    {
+      "price": 99,
+      "quantity": 5,
+      "buyId": 100082,
+      "sellId": 100071
+    },
+    {
+      "price": 99,
       "quantity": 1,
-      "timestamp": 50
+      "buyId": 100083,
+      "sellId": 100071
+    },
+    {
+      "price": 100,
+      "quantity": 1,
+      "buyId": 100084,
+      "sellId": 100050
+    },
+    {
+      "price": 100,
+      "quantity": 7,
+      "buyId": 100084,
+      "sellId": 100055
+    },
+    {
+      "price": 96,
+      "quantity": 2,
+      "buyId": 100045,
+      "sellId": 100085
+    },
+    {
+      "price": 100,
+      "quantity": 1,
+      "buyId": 100087,
+      "sellId": 100055
+    },
+    {
+      "price": 100,
+      "quantity": 1,
+      "buyId": 100087,
+      "sellId": 100065
+    },
+    {
+      "price": 100,
+      "quantity": 7,
+      "buyId": 100087,
+      "sellId": 100077
+    },
+    {
+      "price": 96,
+      "quantity": 3,
+      "buyId": 100045,
+      "sellId": 100088
+    },
+    {
+      "price": 96,
+      "quantity": 1,
+      "buyId": 100051,
+      "sellId": 100088
+    },
+    {
+      "price": 101,
+      "quantity": 1,
+      "buyId": 100089,
+      "sellId": 100041
+    },
+    {
+      "price": 101,
+      "quantity": 3,
+      "buyId": 100089,
+      "sellId": 100043
+    },
+    {
+      "price": 96,
+      "quantity": 5,
+      "buyId": 100051,
+      "sellId": 100090
+    },
+    {
+      "price": 101,
+      "quantity": 3,
+      "buyId": 100092,
+      "sellId": 100043
+    },
+    {
+      "price": 96,
+      "quantity": 1,
+      "buyId": 100051,
+      "sellId": 100093
+    },
+    {
+      "price": 96,
+      "quantity": 3,
+      "buyId": 100068,
+      "sellId": 100093
+    },
+    {
+      "price": 96,
+      "quantity": 2,
+      "buyId": 100075,
+      "sellId": 100093
+    },
+    {
+      "price": 101,
+      "quantity": 4,
+      "buyId": 100094,
+      "sellId": 100043
+    },
+    {
+      "price": 104,
+      "quantity": 5,
+      "buyId": 100095,
+      "sellId": 100086
+    },
+    {
+      "price": 105,
+      "quantity": 4,
+      "buyId": 100095,
+      "sellId": 100091
+    },
+    {
+      "price": 103,
+      "quantity": 5,
+      "buyId": 100094,
+      "sellId": 100096
+    },
+    {
+      "price": 96,
+      "quantity": 5,
+      "buyId": 100075,
+      "sellId": 100096
+    },
+    {
+      "price": 105,
+      "quantity": 4,
+      "buyId": 100097,
+      "sellId": 100091
+    },
+    {
+      "price": 96,
+      "quantity": 2,
+      "buyId": 100075,
+      "sellId": 100098
+    },
+    {
+      "price": 96,
+      "quantity": 7,
+      "buyId": 100076,
+      "sellId": 100098
+    },
+    {
+      "price": 105,
+      "quantity": 1,
+      "buyId": 100099,
+      "sellId": 100091
+    },
+    {
+      "price": 103,
+      "quantity": 4,
+      "buyId": 100099,
+      "sellId": 100100
     }
-  ]
+  ],
+  "snapshots": [
+    {"timestamp": 2},
+    {"timestamp": 4},
+    {"timestamp": 6},
+    {"timestamp": 8},
+    {"timestamp": 10},
+    {"timestamp": 14},
+    {"timestamp": 16},
+    {"timestamp": 18},
+    {"timestamp": 21},
+    {"timestamp": 25},
+    {"timestamp": 29},
+    {"timestamp": 32},
+    {"timestamp": 35},
+    {"timestamp": 37},
+    {"timestamp": 39},
+    {"timestamp": 41},
+    {"timestamp": 43},
+    {"timestamp": 45},
+    {"timestamp": 49},
+    {"timestamp": 51},
+    {"timestamp": 53},
+    {"timestamp": 55},
+    {"timestamp": 58},
+    {"timestamp": 60},
+    {"timestamp": 62},
+    {"timestamp": 64},
+    {"timestamp": 66},
+    {"timestamp": 69},
+    {"timestamp": 71},
+    {"timestamp": 74},
+    {"timestamp": 77},
+    {"timestamp": 81},
+    {"timestamp": 84},
+    {"timestamp": 87},
+    {"timestamp": 90},
+    {"timestamp": 92},
+    {"timestamp": 96},
+    {"timestamp": 98},
+    {"timestamp": 102},
+    {"timestamp": 105},
+    {"timestamp": 107},
+    {"timestamp": 109},
+    {"timestamp": 111},
+    {"timestamp": 115},
+    {"timestamp": 117},
+    {"timestamp": 119},
+    {"timestamp": 122},
+    {"timestamp": 124},
+    {"timestamp": 126},
+    {"timestamp": 128},
+    {"timestamp": 130},
+    {"timestamp": 133},
+    {"timestamp": 137},
+    {"timestamp": 141},
+    {"timestamp": 143},
+    {"timestamp": 145},
+    {"timestamp": 147},
+    {"timestamp": 151},
+    {"timestamp": 155},
+    {"timestamp": 159},
+    {"timestamp": 161},
+    {"timestamp": 163},
+    {"timestamp": 165},
+    {"timestamp": 167},
+    {"timestamp": 169},
+    {"timestamp": 173},
+    {"timestamp": 175},
+    {"timestamp": 177},
+    {"timestamp": 179},
+    {"timestamp": 183},
+    {"timestamp": 185},
+    {"timestamp": 188},
+    {"timestamp": 193},
+    {"timestamp": 197},
+    {"timestamp": 199},
+    {"timestamp": 201},
+    {"timestamp": 203},
+    {"timestamp": 205},
+    {"timestamp": 209},
+    {"timestamp": 214},
+    {"timestamp": 218},
+    {"timestamp": 221},
+    {"timestamp": 224},
+    {"timestamp": 228},
+    {"timestamp": 231},
+    {"timestamp": 233},
+    {"timestamp": 238},
+    {"timestamp": 242},
+    {"timestamp": 246},
+    {"timestamp": 249},
+    {"timestamp": 251},
+    {"timestamp": 254},
+    {"timestamp": 259},
+    {"timestamp": 262},
+    {"timestamp": 266},
+    {"timestamp": 270},
+    {"timestamp": 273},
+    {"timestamp": 277},
+    {"timestamp": 280},
+    {"timestamp": 283}
+  ],
+  "strategies": {
+    "Spread": {
+      "pnl": 0,
+      "sharpe": 0,
+      "drawdown": 0,
+      "trades": 83,
+      "pnlHistory": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    },
+    "MarketMaking": {
+      "pnl": 0,
+      "sharpe": 0,
+      "drawdown": 0,
+      "trades": 83,
+      "pnlHistory": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    },
+    "Momentum": {
+      "pnl": 9.7,
+      "sharpe": 0,
+      "drawdown": 0,
+      "trades": 118,
+      "pnlHistory": [0,0,0,-3.3,-7.6,-11,-14.6,-21.8,-25.4,-36.2,351.6,141.8,141.8,141.8,141.8,141.8,-60.2,-62,-65.3,-67.5,-72,-74.2,-70.8,-73.4,18.9,-80.1,-183.1,-86,107.8,204.7,495.4,495.4,495.4,495.4,-86.6,299.6,-94.4,-104,-111.8,-114.2,-119,-121.2,-133.5,250.6,-137.4,-137.4,-153,-169.4,-177.6,-201,-108.1,-108.1,-206.6,-211.2,-212.6,-214,-218.8,76.7,76.7,-212.8,-20.2,267.5,-220,-220,-224.3,-230,-730.5,-346.1,-250,-154.1,133.6,133.6,133.6,-258,-454.2,-552.3,-552.3,-552.3,-552.3,-649.4,-649.4,-649.4,-649.4,-748.5,-847.6,-262.6,-262.6,-271,-274.2,-280.6,-283.8,-285.2,-292.2,-298.3,-300.4,-304.6,-1393.1,-1200.9,-1200.9,-680.4,-276,-175.1,-76.2,-282.2,-284,-596.3,-596.3,-290,-188.1,-188.1,-293,-608.3,-608.3,-608.3,-608.3,-299,9.7,9.7]
+    },
+    "Imbalance": {
+      "pnl": 0,
+      "sharpe": 0,
+      "drawdown": 0,
+      "trades": 83,
+      "pnlHistory": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    }
+  }
 }
